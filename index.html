@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>삿포로 여행 지도</title>
+<meta name="theme-color" content="#1f6feb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#fff;--fg:#1c1c1f;--sub:#6b6b73;--line:#e4e4e8;--chip:#f2f2f5;--accent:#1f6feb}
+@media (prefers-color-scheme:dark){:root{--bg:#1b1b1f;--fg:#ededf0;--sub:#a0a0aa;--line:#33333a;--chip:#2a2a30;--accent:#4c8dff}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-tap-highlight-color:transparent}
+body{display:flex;flex-direction:column;overflow:hidden}
+header{padding:8px 12px 6px;padding-top:max(8px,env(safe-area-inset-top));background:var(--bg);border-bottom:1px solid var(--line);z-index:1000}
+#topRow{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+#areas{flex:1;display:flex;background:var(--chip);border-radius:10px;padding:3px;gap:2px;overflow-x:auto;scrollbar-width:none}
+#areas::-webkit-scrollbar{display:none}
+.area{flex:1;border:0;background:transparent;color:var(--sub);border-radius:8px;padding:6px 4px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.area.on{background:var(--bg);color:var(--fg);box-shadow:0 1px 3px #0002}
+#tipBtn{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+#cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.cat{min-width:0;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:12px;padding:7px 2px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;overflow:hidden}
+.cat .n{display:block;font-size:11px;font-weight:400;color:var(--sub)}
+.cat.on{color:#fff;border-color:transparent}
+.cat.on .n{color:#ffffffcc}
+#subs{display:flex;gap:6px;overflow-x:auto;padding:8px 0 2px;scrollbar-width:none}
+#subs::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit}
+.chip.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.chip.chain{border-style:dashed}
+.chip.chain.on{border-style:solid}
+.sep{flex:none;width:1px;background:var(--line);margin:4px 2px}
+.hint{font-size:12px;color:var(--sub);padding:6px 2px}
+#map{flex:1;min-height:0}
+#locBtn{position:absolute;right:12px;z-index:1000;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--fg);font-size:20px;box-shadow:0 2px 8px #0003;cursor:pointer}
+#sheet{background:var(--bg);border-top:1px solid var(--line);max-height:40vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);z-index:1000}
+#sheet.min{max-height:50px}
+#sheetHead{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;font-weight:600;font-size:15px}
+#sheetHead small{color:var(--sub);font-weight:400}
+#list{list-style:none;margin:0;padding:0 8px 8px;overflow-y:auto}
+#list li{display:flex;gap:10px;align-items:center;padding:10px 8px;border-radius:10px;cursor:pointer}
+#list li:active{background:var(--chip)}
+.dot{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px}
+.li-main{flex:1;min-width:0}
+.li-name{font-weight:600;font-size:14px}
+.li-meta{font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li-dist{font-size:12px;color:var(--accent);flex:none}
+.empty{padding:16px;color:var(--sub);font-size:14px;text-align:center;justify-content:center}
+.pin{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid #fff;box-shadow:0 1px 4px #0006}
+.pin span{transform:rotate(45deg);font-size:14px}
+.pin.done{opacity:.55}
+.leaflet-popup-content{margin:12px 14px;font-size:13px;line-height:1.45;min-width:220px;max-height:55vh;overflow-y:auto}
+.pp-name{font-size:16px;font-weight:700}
+.pp-jp{color:#666;font-size:12px}
+.pp-tag{display:inline-block;background:#f0f0f3;border-radius:6px;padding:1px 7px;font-size:11px;margin:4px 4px 0 0;color:#333}
+.pp-hours{margin:8px 0 0;font-size:12.5px;color:#333}
+.pp-hours small{color:#888}
+.pp-memo{white-space:pre-line;margin:8px 0;padding:8px;background:#fafafa;border-left:3px solid #ddd;border-radius:4px;color:#333}
+.pp-warn{color:#b45309;font-size:12px;margin:4px 0}
+.pp-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.pp-btns a,.pp-btns button{display:block;text-align:center;padding:8px 4px;border-radius:8px;font-size:12.5px;font-weight:600;text-decoration:none;border:1px solid #ddd;background:#fff;color:#222;cursor:pointer;font-family:inherit}
+.pp-btns .main{grid-column:1/-1;background:#1f6feb;color:#fff;border-color:#1f6feb}
+.pp-btns .on{background:#fff7d6;border-color:#f0c000}
+.me{width:16px;height:16px;border-radius:50%;background:#1f6feb;border:3px solid #fff;box-shadow:0 0 0 6px #1f6feb33}
+#tips{position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:16px;padding-top:max(16px,env(safe-area-inset-top));display:none}
+#tips.open{display:block}
+#tips h2{font-size:18px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+#tips h2 button{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}
+#tips details{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+#tips summary{font-weight:700;cursor:pointer;font-size:15px}
+#tips ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.6}
+#tips a{color:var(--accent)}
+#walletBtn{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+#wallet{position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));display:none}
+#wallet.open{display:block}
+#wallet h2{font-size:18px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+.wbtn{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:8px;padding:7px 12px;font-size:13.5px;cursor:pointer;font-family:inherit;font-weight:600}
+.wbtn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.wcard{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.wtotal{font-size:26px;font-weight:800}
+.wsub{color:var(--sub);font-size:13px}
+.wrate{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub);margin-top:8px}
+#wallet .wrate input{width:90px}
+.wform{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.wform .full{grid-column:1/-1}
+.wform label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub);min-width:0}
+#wallet input,#wallet select{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--fg);width:100%;min-width:0}
+.amt{display:flex;gap:6px}
+#wallet .amt select{width:84px;flex:none}
+.wbar{display:flex;align-items:center;gap:8px;font-size:13px;margin:6px 0}
+.wbar .lb{width:96px;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wbar .tr{flex:1;height:10px;background:var(--chip);border-radius:5px;overflow:hidden}
+.wbar .fl{display:block;height:100%;background:var(--accent);border-radius:5px}
+.wbar .vl{flex:none;min-width:76px;text-align:right;font-variant-numeric:tabular-nums}
+.wday{font-weight:700;font-size:14px;margin:14px 0 4px;display:flex;justify-content:space-between;gap:8px}
+.wday span{color:var(--sub);font-weight:600;font-variant-numeric:tabular-nums;font-size:13px}
+.witem{display:flex;align-items:center;gap:8px;padding:9px 2px;border-bottom:1px solid var(--line)}
+.witem .ic{font-size:18px;flex:none}
+.witem .mn{flex:1;min-width:0;cursor:pointer}
+.witem .nm{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.witem .mt{font-size:12px;color:var(--sub)}
+.witem .am{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;flex:none}
+.witem .am small{display:block;font-weight:400;color:var(--sub);font-size:11px}
+.witem button{border:0;background:none;color:var(--sub);font-size:15px;cursor:pointer;padding:4px;flex:none}
+.wtools{display:flex;gap:8px;flex-wrap:wrap}
+.wnote{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <div id="topRow"><div id="areas"></div><button id="walletBtn">💴 지출</button><button id="tipBtn">💡 팁</button></div>
+  <div id="cats"></div>
+  <div id="subs"></div>
+</header>
+<div id="map"></div>
+<button id="locBtn" title="내 위치">◎</button>
+<section id="sheet">
+  <div id="sheetHead"><span id="sheetTitle"></span><small id="toggle">접기 ▼</small></div>
+  <ul id="list"></ul>
+</section>
+
+<div id="tips">
+  <h2>💡 여행 팁 <button onclick="document.getElementById('tips').classList.remove('open')">닫기</button></h2>
+  <details open><summary>🧥 겨울 옷차림 · 준비물</summary><ul>
+    <li>체감 영하 10도 이하, 실내(지하상가·JR)는 난방이 강해요 → <b>레이어드</b> (히트텍+긴팔+가디건/경량패딩)</li>
+    <li>아우터는 방풍·방수 + 모자 달린 것. 두꺼운 롱패딩 하나만 입는 건 비추</li>
+    <li>하의: 기모 바지·조거팬츠. 통 큰 바지는 눈에 젖기 쉬움</li>
+    <li><b>방한화 1순위</b>: 고어텍스/방수 부츠, 미끄럼 방지 밑창. 어그 부츠·밑창 매끈한 운동화 비추</li>
+    <li>방수 안 되는 신발은 출국 전 방수 스프레이 넉넉히</li>
+    <li>아이젠 1,000~2,000엔, 방수 스프레이 700~1,000엔 → 돈키호테·편의점·드럭스토어</li>
+    <li>붙이는 핫팩은 현지 드럭스토어에서 대용량으로 사기</li>
+    <li><a href="https://m.blog.naver.com/happ-py/224447343146" target="_blank">📝 블로그 원문</a></li>
+  </ul></details>
+  <details><summary>🍛 스프카레 주문법 (5단계)</summary><ul>
+    <li>① 메인: 치킨 레그 또는 가쿠니(돼지고기 조림)</li>
+    <li>② 스프: 첫 방문은 오리지널</li>
+    <li>③ 맵기: 4~5단계 = 신라면 정도</li>
+    <li>④ 밥: 스몰/미디엄 + 치즈 토핑 추천</li>
+    <li>⑤ 토핑: <b>튀긴 브로콜리 꼭!</b></li>
+    <li>브레이크타임(15:30~17:00)이 많아요. 저녁 첫 타임은 16:20까지 도착</li>
+    <li>웨이팅 길면 → 분점(스아게2·스아게4, 트레져) 또는 <b>포장</b>(15~20분 뒤 픽업)</li>
+    <li><a href="https://m.blog.naver.com/happ-py/224458817188" target="_blank">📝 비교 글</a> · <a href="https://m.blog.naver.com/happ-py/224466802207" target="_blank">📝 웨이팅 팁</a></li>
+  </ul></details>
+  <details><summary>🍖 징기스칸 웨이팅 팁</summary><ul>
+    <li>다루마는 18시 피크에 2시간 대기 기본 → <b>17시 오픈</b> 또는 <b>22시 이후</b></li>
+    <li>실내 대기: 5.5점, 7.4점 / 락커: 4.4점, 5.5점 / 삿포로 클래식 맥주·최신 환기: 6.4점</li>
+    <li>냄새 싫으면 요조라노(야경, 예약), 마츠오(양념식, 입문자·아이), 비어가든(예약 필수)</li>
+    <li><a href="https://m.blog.naver.com/happ-py/224454972681" target="_blank">📝 지점 비교</a> · <a href="https://m.blog.naver.com/happ-py/224472599415" target="_blank">📝 웨이팅 피하는 법</a></li>
+  </ul></details>
+  <details><summary>⛵ 오타루 당일치기 일정</summary><ul>
+    <li><b>미나미오타루역</b>에서 하차 → 내리막길로 운하까지 (오타루역에서 시작하면 오르막)</li>
+    <li>상점가·오르골당은 <b>17~18시 마감</b> → 부지런히!</li>
+    <li>10:30 삿포로역 출발 → 11:30 오르골당·사카이마치도리 디저트 → 13:00 삼각시장 늦은 점심 → 15:00 운하 크루즈·카페 → 17:30 운하 야경 → 18:30 복귀</li>
+    <li>삼각시장 식당은 14~15시면 재료 소진 마감 → 카이센동은 점심에</li>
+    <li><a href="https://m.blog.naver.com/happ-py/224457441022" target="_blank">📝 블로그 원문</a></li>
+  </ul></details>
+  <details><summary>✈️ 신치토세 공항 · 기념품</summary><ul>
+    <li>국제선 면세구역은 작아요 → 수속 전 <b>국내선으로 넘어가서</b> 시간 보내기</li>
+    <li>국내선 2층 디저트, 3층 라멘도조, 스마일로드 3층 로이스 초콜릿 월드, 4층 온천</li>
+    <li>시로이코이비토: 호불호 없음, 유통기한 4~6개월 → 직장 선물</li>
+    <li>롯카테이 버터샌드: 건포도 호불호, 유통기한 약 10일</li>
+    <li>르타오 더블 프로마쥬: 냉동, 해동 후 2일 → <b>보냉백(약 100엔) 필수</b></li>
+    <li><a href="https://m.blog.naver.com/happ-py/224452825638" target="_blank">📝 공항</a> · <a href="https://m.blog.naver.com/happ-py/224455198594" target="_blank">📝 면세 쇼핑</a></li>
+  </ul></details>
+  <details><summary>🐟 니조시장 팁</summary><ul>
+    <li>아침 일찍(7시 오픈) 조식 대신 방문 추천</li>
+    <li>노점·작은 식당은 <b>현금만</b></li>
+    <li>먹은 후 소세이가와 공원 산책 → 다누키코지 돈키호테 쇼핑 (반나절 코스)</li>
+  </ul></details>
+</div>
+
+<div id="wallet">
+  <h2>💴 여행 지출 <button class="wbtn" onclick="closeWallet()">닫기</button></h2>
+  <div class="wcard">
+    <div class="wsub">총 지출</div>
+    <div class="wtotal" id="wTotal">¥0</div>
+    <div class="wsub" id="wTotalKrw">≈ ₩0</div>
+    <div class="wrate">환율: 100엔 = ₩ <input id="wRate" type="number" inputmode="decimal" step="0.1"> <span>(직접 수정)</span></div>
+  </div>
+  <div class="wcard">
+    <form class="wform" id="wForm">
+      <label>날짜<input type="date" id="wDate" required></label>
+      <label>분류<select id="wCat"></select></label>
+      <label class="full">내용<input id="wItem" list="wPlaces" placeholder="예: 다루마 6.4점 저녁" required></label>
+      <label class="full">금액<span class="amt"><input id="wAmt" type="number" inputmode="decimal" min="0" step="any" placeholder="0" required><select id="wCur"><option value="JPY">엔 ¥</option><option value="KRW">원 ₩</option></select></span></label>
+      <label class="full">결제수단<select id="wPay"></select></label>
+      <button class="wbtn primary full" type="submit" id="wSubmit">+ 추가</button>
+    </form>
+    <datalist id="wPlaces"></datalist>
+  </div>
+  <div class="wcard"><div style="font-weight:700;margin-bottom:6px">분류별</div><div id="wByCat"></div>
+    <div style="font-weight:700;margin:12px 0 6px">결제수단별</div><div id="wByPay"></div></div>
+  <div class="wcard"><div style="font-weight:700">지출 내역 <span class="wsub">(누르면 수정)</span></div><div id="wList"></div></div>
+  <div class="wcard">
+    <div class="wtools">
+      <button class="wbtn primary" onclick="exportXlsx()">📥 엑셀 다운로드</button>
+      <button class="wbtn" onclick="document.getElementById('wFile').click()">📤 엑셀 불러오기</button>
+      <input type="file" id="wFile" accept=".xlsx,.xls" hidden>
+    </div>
+    <div class="wnote">⚠️ 지출 내역은 <b>이 폰의 이 브라우저에만</b> 저장돼요. 브라우저 기록을 지우면 사라지니, 가끔 엑셀로 다운받아 백업하세요. 다른 기기로 옮길 땐 다운받은 엑셀을 '불러오기' 하면 돼요.</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* =====================================================================
+   ✏️ 가게 데이터 — 여기만 고치면 돼요
+   - area  : 삿포로 / 오타루 / 공항
+   - cat   : 식당 / 놀거리 / 쇼핑 / 기타
+   - sub   : 소분류 (새로 쓰면 버튼이 자동으로 생겨요)
+   - chain : 체인점이면 체인 이름 (같은 이름끼리 묶여요)
+   - jp    : 구글지도 검색어 (일본어 가게 이름)
+   - gmap  : 구글지도 공유 링크 (있으면 가장 정확)
+   - hours : 블로그 기준 영업시간 (실제는 구글지도 버튼으로 확인)
+   - blog  : 참고 블로그 글 번호
+   - approx: true 면 "위치 대략" 표시
+   ===================================================================== */
+const PLACES = [
+  /* ---------- 🍜 식당 · 양고기 ---------- */
+  { name:"다루마 본점", jp:"成吉思汗だるま 本店", area:"삿포로", cat:"식당", sub:"양고기", chain:"다루마",
+    lat:43.05384, lng:141.35246, hours:"17:00 오픈", blog:"224454972681",
+    memo:"상징성은 크지만 매장 협소, 냄새가 잘 안 빠지고 대기열 가장 김" },
+  { name:"다루마 4.4점", jp:"成吉思汗だるま 4.4店", area:"삿포로", cat:"식당", sub:"양고기", chain:"다루마",
+    lat:43.054858, lng:141.352447, gmap:"https://maps.google.com/?cid=17613118764433307011", hours:"17:00 오픈", blog:"224454972681",
+    memo:"환기가 되지 않음. 개인 락커 있음\n오픈시간 5시, 10시 이후 추천" },
+  { name:"다루마 5.5점", jp:"成吉思汗だるま 5.5店", area:"삿포로", cat:"식당", sub:"양고기", chain:"다루마",
+    lat:43.053665, lng:141.352119, gmap:"https://maps.google.com/?cid=257774937553959204", hours:"17:00 오픈", blog:"224454972681",
+    memo:"실내 대기석 · 개인 락커 있음\n오픈시간 5시, 10시 이후 추천" },
+  { name:"다루마 6.4점", jp:"成吉思汗だるま 6.4店", area:"삿포로", cat:"식당", sub:"양고기", chain:"다루마",
+    lat:43.05266, lng:141.35329, gmap:"https://maps.app.goo.gl/Gkym8sb29V8pzCJh6", hours:"17:00 오픈", blog:"224454972681",
+    memo:"유일하게 홋카이도 한정 삿포로 클래식 맥주 (타 지점은 아사히)\n환기 최신식 → 냄새 덜 뱀, 한국인 1순위\n오픈시간 5시, 10시 이후 추천" },
+  { name:"다루마 7.4점", jp:"成吉思汗だるま 7.4店", area:"삿포로", cat:"식당", sub:"양고기", chain:"다루마",
+    lat:43.052463, lng:141.353911, gmap:"https://maps.google.com/?cid=2544906055226059887", hours:"17:00 오픈", blog:"224454972681",
+    memo:"가장 최근 오픈, 시설 깔끔, 웨이팅 상대적으로 짧음\n실내 대기석\n오픈시간 5시, 10시 이후 추천" },
+  { name:"요조라노 징기스칸 본점", jp:"夜空のジンギスカン 本店", area:"삿포로", cat:"식당", sub:"양고기",
+    lat:43.055846, lng:141.351850, gmap:"https://maps.google.com/?cid=3594872394726202753", blog:"224472599415",
+    memo:"MY플라자 빌딩 10층 · 스스키노 관람차 야경 뷰\n환기 훌륭, 코스 메뉴 → 부모님·연인 추천\n✅ 예약 필수 (구글맵 링크 / 핫페퍼)" },
+  { name:"이타다키마스", jp:"成吉思汗 いただきます", area:"삿포로", cat:"식당", sub:"양고기",
+    lat:43.053970, lng:141.351944, gmap:"https://maps.google.com/?cid=7188378095822680352", blog:"224454972681",
+    memo:"홋카이도 직영 농장 양고기, 내장 등 특수부위 → 미식가 추천" },
+  { name:"시로쿠마", jp:"ジンギスカン しろくま 札幌", area:"삿포로", cat:"식당", sub:"양고기",
+    lat:43.053791, lng:141.355068, gmap:"https://maps.google.com/?cid=11090161852297233297", blog:"224454972681",
+    memo:"아이슬란드·홋카이도산 양고기 + 삿포로 맥주\n다루마보다 비싸지만 쾌적하고 웨이팅 적음" },
+  { name:"마츠오 징기스칸 삿포로역앞점", jp:"松尾ジンギスカン 札幌駅前店", area:"삿포로", cat:"식당", sub:"양고기", chain:"마츠오 징기스칸",
+    lat:43.06502, lng:141.35035, blog:"224472599415",
+    memo:"양념 양고기를 자작하게 졸이는 현지 스타일, 냄새 거의 없음\n양고기 입문자·아이 추천 · 바우처 사전결제 가능" },
+  { name:"마츠오 징기스칸 남1조점", jp:"松尾ジンギスカン 札幌南1条店", area:"삿포로", cat:"식당", sub:"양고기", chain:"마츠오 징기스칸",
+    lat:43.05903, lng:141.35163, blog:"224472599415",
+    memo:"양념 양고기 현지 스타일, 냄새 거의 없음" },
+  { name:"삿포로 비어가든", jp:"サッポロビール園", area:"삿포로", cat:"식당", sub:"양고기",
+    lat:43.07089, lng:141.36884, blog:"224472599415",
+    memo:"붉은 벽돌 맥주 박물관 · 무제한 징기스칸 + 공장 직송 생맥주\n✅ 예약 없이 가면 안 됨 (바우처 사전결제)" },
+  { name:"램구치 카즈야", jp:"ジンギスカン×厚岸かき ラムぐち和や", area:"삿포로", cat:"식당", sub:"양고기",
+    lat:43.05467, lng:141.35652,
+    gmap:"https://www.google.com/maps/place/Genghis+Khan+%C3%97+Akkeshi+Oysters+Lambguchi+Kazuya/data=!4m6!3m5!1s0x5f0b290c10fa8cb5:0xcd044e85d2b72700!8m2!3d43.0546653!4d141.3565194!16s%2Fg%2F11frqxp76c",
+    memo:"징기스칸 × 아케시 굴 (양고기 + 굴 요리)" },
+
+  /* ---------- 🍜 식당 · 스프카레 ---------- */
+  { name:"수프카레 스아게+ (본점)", jp:"スープカレー すあげ+", area:"삿포로", cat:"식당", sub:"스프카레", chain:"스아게",
+    lat:43.055737, lng:141.351270, gmap:"https://maps.google.com/?cid=10502422655510800755", blog:"224466802207",
+    memo:"맑고 깔끔·담백 → 입문자 추천\n튀긴 채소·고기를 꼬치에 꽂아 제공, 오징어 먹물 스프 가능\n줄이 계단 아래까지면 → 스아게2 / 스아게4\n포장 가능" },
+  { name:"수프카레 스아게2", jp:"スープカレー すあげ2", area:"삿포로", cat:"식당", sub:"스프카레", chain:"스아게",
+    lat:43.05565, lng:141.35085, blog:"224466802207",
+    memo:"본점 바로 옆 건물 4층 · 맛·메뉴·가격 동일\n10~20분 만에 입장하거나 웨이팅 없을 때도" },
+  { name:"수프카레 스아게4 (미레도점)", jp:"スープカレー すあげ4 ミレド", area:"삿포로", cat:"식당", sub:"스프카레", chain:"스아게",
+    lat:43.064699, lng:141.351380, gmap:"https://maps.google.com/?cid=4922615771294077315", blog:"224466802207",
+    memo:"다이도생명빌딩 miredo 2층 · 본점과 동일한 맛" },
+  { name:"스프카레 가라쿠 본점", jp:"スープカレー GARAKU", area:"삿포로", cat:"식당", sub:"스프카레", chain:"가라쿠·트레져",
+    lat:43.058400, lng:141.358900, gmap:"https://maps.google.com/?cid=16775367457305999515", blog:"224458817188",
+    memo:"한국인 1위 · 걸쭉·짭짤, 향신료 감칠맛 강함\n치즈 토치 밥 추천\n입구 태블릿 번호표 → LINE으로 QR 스캔해 실시간 순서 확인\n2시간 이상이면 → 트레져 (같은 육수)" },
+  { name:"수프카레 트레져", jp:"スープカレー TREASURE", area:"삿포로", cat:"식당", sub:"스프카레", chain:"가라쿠·트레져",
+    lat:43.058224, lng:141.356899, gmap:"https://maps.google.com/?cid=16942912665032480953", blog:"224466802207",
+    memo:"가라쿠 자매점, 같은 비법 육수 · 웨이팅 절반 이하\n현지인 많이 찾음" },
+  { name:"로지우라 커리 사무라이 사쿠라점", jp:"Rojiura Curry SAMURAI さくら店", area:"삿포로", cat:"식당", sub:"스프카레",
+    lat:43.05580, lng:141.34990, blog:"224458817188",
+    memo:"카레라이스에 가까운 걸쭉한 농도, 단호박·토마토 베이스로 달큰\n홋카이도산 제철 채소 20가지 → 채소 매니아 추천" },
+
+  { name:"수프카레 쇼린", area:"삿포로", cat:"식당", sub:"스프카레",
+    lat:43.054888, lng:141.354142, gmap:"https://maps.google.com/?cid=17261760635755293269",
+    memo:"스스키노 스프카레 (구글 저장 목록)" },
+
+  /* ---------- 🍜 식당 · 라멘 ---------- */
+  { name:"시라카바산소 (라멘요코초)", jp:"白樺山荘 ラーメン横丁店", area:"삿포로", cat:"식당", sub:"라멘",
+    lat:43.05470, lng:141.35423, hours:"18:00-02:00 · 일·월 정기휴무", blog:"224431719155",
+    memo:"💴 현금만 · 바 6석, 회전 빠름 · 현지인 단골 맛집\n미소 980엔(시그니처), 카라쿠치 1,060엔(신라면 맵기)\n버터콘 토핑 추천, 삶은 계란 무료" },
+  { name:"테시카가 라멘 (라멘요코초)", jp:"弟子屈ラーメン 札幌", area:"삿포로", cat:"식당", sub:"라멘",
+    lat:43.05476, lng:141.35432, approx:true, blog:"224431719155",
+    memo:"요코초 유명 라멘 · 1시간 30분 이상 웨이팅\n(블로거는 앞의 시라카바산소로 감)" },
+  { name:"에비소바 이치겐 본점", jp:"えびそば一幻 総本店", area:"삿포로", cat:"식당", sub:"라멘", chain:"에비소바 이치겐",
+    lat:43.05127, lng:141.34547, hours:"11:00-03:00", blog:"224434867962",
+    memo:"단새우 머리 육수 · 구글 4.3 (리뷰 6,000+)\n베이스(시오/미소/쇼유) × 농도(손노마마/호도호도/아지와이)\n추천: 에비시오 + 손노마마, 오니기리 말아먹기\n중심가에서 도보 15분, 실내 웨이팅석, 주차 5대" },
+
+  { name:"라멘 요시야마쇼우텐 다누키코지점", area:"삿포로", cat:"식당", sub:"라멘",
+    lat:43.056860, lng:141.350999, gmap:"https://maps.google.com/?cid=9960526123896616014",
+    memo:"다누키코지 라멘집 (구글 저장 목록)" },
+
+  /* ---------- 🍜 식당 · 스시/해산물 ---------- */
+  { name:"카츠잇센 (노르베사 B1)", jp:"回転寿司 活一鮮 ノルベサ", area:"삿포로", cat:"식당", sub:"스시·해산물",
+    lat:43.056149, lng:141.350819, gmap:"https://maps.google.com/?cid=10649156200873932661", hours:"평일 12:00-23:00 (B.T 15:00-16:30) · 주말 11:00-23:00", blog:"224432583642",
+    memo:"가성비 회전초밥, 태블릿 주문\n✔️ 우니 꼭! 중토로·장어·고등어 추천\n주말 저녁 8시 기준 1시간 대기" },
+  { name:"네무로 하나마루 (스텔라플레이스 6층)", jp:"回転寿司 根室花まる JRタワーステラプレイス店", area:"삿포로", cat:"식당", sub:"스시·해산물",
+    lat:43.06793, lng:141.35014, hours:"11:00 오픈 · 번호표 10:00부터", blog:"224458663317",
+    memo:"기본 2~3시간 웨이팅 → 10시에 발권기 번호표 뽑기\nQR로 실시간 순서 확인, 호출 때 없으면 취소!\n대기 중: 다이마루 8층 포켓몬센터 / 5층 디즈니스토어\n추천: 게장국(텟포지루), 가리비, 생연어, 엔가와 · 한국어 메뉴" },
+  { name:"토리톤스시 키타8조 코우세이점", jp:"回転寿しトリトン 北8条光星店", area:"삿포로", cat:"식당", sub:"스시·해산물",
+    lat:43.07274, lng:141.36142,
+    gmap:"https://www.google.com/maps/place/%ED%86%A0%EB%A6%AC%ED%86%A4%EC%8A%A4%EC%8B%9C+%ED%82%A4%ED%83%808%EC%A1%B0+%EC%BD%94%EC%9A%B0%EC%84%B8%EC%9D%B4%EC%A0%90/data=!4m6!3m5!1s0x5f0b2973685b1abf:0x1379fbec79f90944!8m2!3d43.0727363!4d141.3614178!16s%2Fg%2F11c5rsd3tn",
+    memo:"홋카이도 인기 회전초밥 체인 · 삿포로역 북동쪽 (도보 약 15분)" },
+  { name:"니조시장", jp:"二条市場", area:"삿포로", cat:"식당", sub:"스시·해산물",
+    lat:43.05830, lng:141.35845, hours:"07:00-17:00", blog:"224442237346",
+    memo:"카이센동 · 가리비/굴구이 · 유바리 멜론\n아침 일찍 방문 추천, 💴 현금 필수\n맛집: 오이소, 돈베이, 돈부리차야, 사카나야노 다이도코로" },
+  { name:"돈베이 (니조시장)", jp:"どんぶり屋 どんべい 二条市場", area:"삿포로", cat:"식당", sub:"스시·해산물",
+    lat:43.05867, lng:141.35930, hours:"07:00-20:00", blog:"224442237346",
+    memo:"현지인 카이센동 맛집, 오픈런 많음 · 한국어 불가\n満足丼 3,480엔 / 特選さっぽろ朝市丼 2,580~2,880엔" },
+  { name:"삼각시장", jp:"小樽 三角市場", area:"오타루", cat:"식당", sub:"스시·해산물",
+    lat:43.199036, lng:140.993927, gmap:"https://maps.google.com/?cid=18281937072950691954", hours:"08:00-17:00", blog:"224457441022",
+    memo:"오타루역 옆 도보 1분 · 카이센동\n14~15시면 재료 소진 마감 → 점심에 가기" },
+  { name:"타키나미 식당 (삼각시장)", jp:"滝波食堂 小樽", area:"오타루", cat:"식당", sub:"스시·해산물",
+    lat:43.19910, lng:140.99385, approx:true, blog:"224457441022",
+    memo:"삼각시장 인기 카이센동 · 오후 2~3시 조기 마감 많음" },
+  { name:"아지도코로 타케다 (삼각시장)", jp:"味処たけだ 小樽", area:"오타루", cat:"식당", sub:"스시·해산물",
+    lat:43.19898, lng:140.99400, approx:true, blog:"224430956083",
+    memo:"삼각시장 해산물·스시 맛집" },
+  { name:"마사즈시 본점", jp:"政寿司 本店 小樽", area:"오타루", cat:"식당", sub:"스시·해산물",
+    lat:43.19417, lng:141.00016, blog:"224430956083",
+    memo:"80년 이상 전통 초밥 전문점 (스시야도리)" },
+  { name:"이세즈시", jp:"伊勢鮨 小樽", area:"오타루", cat:"식당", sub:"스시·해산물",
+    lat:43.20058, lng:140.99549, blog:"224430956083",
+    memo:"미슐랭 스시 · 예약 추천" },
+
+  /* ---------- 🍜 식당 · 야키니쿠 ---------- */
+  { name:"야키니쿠 시부키", jp:"焼肉 しぶき 札幌", area:"삿포로", cat:"식당", sub:"야키니쿠",
+    lat:43.05606, lng:141.35197, hours:"17:00-24:00", blog:"224441314860",
+    memo:"✅ 예약 필수 (평일 18시 예약없이 → 2시간 대기)\n와규 서로인 3,500엔 강추, 안심 4,500엔\n바석만 있어 2~3인 추천 · 한국어 가능 직원 많음" },
+  { name:"우시토사카나 다누키코지점", jp:"Wagyu & Seafood USHITOSAKANA 狸小路", area:"삿포로", cat:"식당", sub:"야키니쿠",
+    lat:43.05685, lng:141.35074,
+    gmap:"https://www.google.com/maps/place/Wagyu+%26+Seafood+USHITOSAKANA,+Tanukikoji/data=!4m6!3m5!1s0x5f0b29000353b105:0x5f776a842ebfbec3!8m2!3d43.0568473!4d141.3507364!16s%2Fg%2F11w377wkyq",
+    memo:"와규 & 해산물 · 다누키코지 상점가" },
+
+  /* ---------- 🍜 식당 · 정식/별미 ---------- */
+  { name:"와카도리지다이 나루토 본점", jp:"若鶏時代なると 本店 小樽", area:"오타루", cat:"식당", sub:"정식·별미",
+    lat:43.19930, lng:140.99600, approx:true, blog:"224430956083",
+    memo:"영계 반마리 튀김 노포 맛집, 해산물도 유명" },
+  { name:"야부한", jp:"籔半 小樽", area:"오타루", cat:"식당", sub:"정식·별미",
+    lat:43.19653, lng:140.99579, blog:"224430956083",
+    memo:"70년 넘는 역사의 소바집" },
+
+  /* ---------- 🍜 식당 · 디저트·카페 ---------- */
+  { name:"르타오 본점", jp:"小樽洋菓子舗ルタオ 本店", area:"오타루", cat:"식당", sub:"디저트·카페", chain:"르타오",
+    lat:43.19131, lng:141.00744, blog:"224457441022",
+    memo:"더블 프로마쥬 치즈케이크 · 사카이마치도리 (17시쯤 마감)" },
+  { name:"기타카로 오타루 본관", jp:"北菓楼 小樽本館", area:"오타루", cat:"식당", sub:"디저트·카페", chain:"기타카로",
+    lat:43.19175, lng:141.00742, blog:"224430956083",
+    memo:"바움쿠헨, 슈크림 · 사카이마치도리" },
+  { name:"롯카테이 오타루운하점", jp:"六花亭 小樽運河店", area:"오타루", cat:"식당", sub:"디저트·카페", chain:"롯카테이",
+    lat:43.19200, lng:141.00700, approx:true, blog:"224457441022",
+    memo:"마루세이 버터샌드 · 사카이마치도리" },
+  { name:"카마에이 공장직매점", jp:"かま栄 工場直売店 小樽", area:"오타루", cat:"식당", sub:"디저트·카페", chain:"카마에이",
+    lat:43.19571, lng:141.00507, blog:"224430956083",
+    memo:"100년 역사 어묵 · 빵롤(판로루) 유명" },
+  { name:"사와와", jp:"茶和々 小樽", area:"오타루", cat:"식당", sub:"디저트·카페",
+    lat:43.19230, lng:141.00660, approx:true, blog:"224430956083",
+    memo:"말차 전문점" },
+
+  { name:"라스트민트 팬케이크", area:"삿포로", cat:"식당", sub:"디저트·카페",
+    lat:43.058453, lng:141.353791, gmap:"https://maps.google.com/?cid=9293142619457676305",
+    memo:"팬케이크 카페 (구글 저장 목록)" },
+  { name:"크리미아", area:"삿포로", cat:"식당", sub:"디저트·카페",
+    lat:43.057149, lng:141.351211, gmap:"https://maps.google.com/?cid=9351396121274720782",
+    memo:"소프트아이스크림 (구글 저장 목록) · 다누키코지" },
+  { name:"삿포로 교자제조소 타누키코지점", area:"삿포로", cat:"식당", sub:"정식·별미",
+    lat:43.056935, lng:141.349927, gmap:"https://maps.google.com/?cid=18388793500781845643",
+    memo:"교자 전문점 (구글 저장 목록) · 다누키코지" },
+  { name:"긴다코", area:"삿포로", cat:"식당", sub:"타코야키·간식",
+    lat:43.054872, lng:141.353751, gmap:"https://maps.google.com/?cid=15117402732871965989",
+    memo:"타코야키 (구글 저장 목록) · 스스키노" },
+  { name:"타코야키와 하이볼 타누키코지 본점", area:"삿포로", cat:"식당", sub:"타코야키·간식",
+    lat:43.057226, lng:141.352303, gmap:"https://maps.google.com/?cid=13342161979996656665",
+    memo:"타코야키 + 하이볼 (구글 저장 목록)" },
+
+  /* ---------- 🎡 놀거리 ---------- */
+  { name:"삿포로 TV타워", jp:"さっぽろテレビ塔", area:"삿포로", cat:"놀거리", sub:"관광명소",
+    lat:43.06110, lng:141.35642, blog:"224246309672", memo:"오도리공원 동쪽 끝 · 전망대" },
+  { name:"스와 신사", area:"삿포로", cat:"놀거리", sub:"관광명소",
+    lat:43.075845, lng:141.353793, gmap:"https://maps.google.com/?cid=7035906675692593278",
+    memo:"신사 (구글 저장 목록) · 삿포로역 북쪽" },
+  { name:"오도리 공원", jp:"大通公園", area:"삿포로", cat:"놀거리", sub:"공원·산책",
+    lat:43.06075, lng:141.35443, blog:"224442237346", memo:"삿포로 중심 공원 · 겨울 눈축제 장소" },
+  { name:"소세이가와 공원", jp:"創成川公園", area:"삿포로", cat:"놀거리", sub:"공원·산책",
+    lat:43.06026, lng:141.35730, blog:"224442237346", memo:"니조시장 식사 후 산책 코스" },
+  { name:"노르베사 대관람차", jp:"ノルベサ 観覧車 nORIA", area:"삿포로", cat:"놀거리", sub:"관광명소",
+    lat:43.056086, lng:141.350924, gmap:"https://maps.google.com/?cid=3229140340321049970", blog:"224432583642", memo:"스스키노 관람차 · 지하 1층에 카츠잇센" },
+  { name:"스스키노 니카 위스키 간판", jp:"すすきの ニッカウヰスキー看板", area:"삿포로", cat:"놀거리", sub:"관광명소",
+    lat:43.05545, lng:141.35331, blog:"224441314860", memo:"스스키노 사거리 대표 포토존" },
+  { name:"오타루 운하", jp:"小樽運河", area:"오타루", cat:"놀거리", sub:"관광명소",
+    lat:43.20202, lng:141.00060, blog:"224457441022",
+    memo:"운하 크루즈 15~17시, 야경·가스등 17:30~" },
+  { name:"오타루 오르골당 본관", jp:"小樽オルゴール堂 本館", area:"오타루", cat:"놀거리", sub:"관광명소",
+    lat:43.19053, lng:141.00797, hours:"09:00-18:00 (비수기 평일 17:30 마감)", blog:"224430956083",
+    memo:"입장 무료 · Tax Free\n정문 증기시계(15분마다 멜로디) 포토존\n1층 오르골·선물 / 2층 역사·앤티크 / 3층 지브리·디즈니" },
+  { name:"사카이마치도리 상점가", jp:"堺町通り商店街 小樽", area:"오타루", cat:"놀거리", sub:"관광명소",
+    lat:43.19300, lng:141.00600, approx:true, blog:"224457441022",
+    memo:"유리공예점 · 공예품점 · 디저트카페 거리\n르타오·롯카테이·기타카로\n⚠️ 17시면 대부분 문 닫음" },
+  { name:"영화 '윤희에게' 우체국", jp:"小樽 豊川町 郵便局", area:"오타루", cat:"놀거리", sub:"관광명소",
+    lat:43.20450, lng:141.00350, approx:true, blog:"224430956083",
+    memo:"주소: 오타루시 도요카와초 14-7\n운하 북쪽 언덕길 주택가 · 포토존" },
+  { name:"로이스 초콜릿 월드", jp:"ロイズチョコレートワールド 新千歳空港", area:"공항", cat:"놀거리", sub:"체험·박물관",
+    lat:42.78830, lng:141.68120, approx:true, hours:"베이커리 09:00 오픈", blog:"224452825638",
+    memo:"스마일로드 3층 · 초콜릿 공방 겸 박물관, 한정판 200여 종\n✔️ 생초코 크로와상 (베이커리 인기 1위)" },
+  { name:"신치토세 공항 온천", jp:"新千歳空港温泉", area:"공항", cat:"놀거리", sub:"온천",
+    lat:42.78660, lng:141.68230, approx:true, hours:"10:00-익일 09:00 (접수 마감 07:00)", blog:"224452825638",
+    memo:"국내선 4층 오아시스파크 (영화관 맞은편)\n성인 2,600엔 / 새벽 1시 이후 2,000엔\n수건·유카타 포함 · 노천탕, 사우나, 수면실\n문신·스티커 입장 불가" },
+
+  /* ---------- 🛍️ 쇼핑 ---------- */
+  { name:"포켓몬센터 삿포로 (다이마루 8층)", jp:"ポケモンセンターサッポロ", area:"삿포로", cat:"쇼핑", sub:"캐릭터",
+    lat:43.06770, lng:141.34930, approx:true, blog:"224458663317",
+    memo:"한정판 피카츄 인형 · 스텔라플레이스와 연결" },
+  { name:"디즈니스토어·무인양품 (스텔라플레이스 5층)", jp:"札幌ステラプレイス", area:"삿포로", cat:"쇼핑", sub:"캐릭터",
+    lat:43.06805, lng:141.35099, blog:"224458663317",
+    memo:"하나마루 웨이팅 중 들르기 좋은 동선" },
+  { name:"메가 돈키호테 (다누키코지)", jp:"MEGAドン・キホーテ 札幌狸小路本店", area:"삿포로", cat:"쇼핑", sub:"잡화·할인",
+    lat:43.05700, lng:141.35280, approx:true, blog:"224447343146",
+    memo:"아이젠 1,000~2,000엔, 방수 스프레이 700~1,000엔\n가라쿠 웨이팅 중 쇼핑 추천" },
+  { name:"다누키코지 상점가", jp:"狸小路商店街", area:"삿포로", cat:"쇼핑", sub:"잡화·할인",
+    lat:43.05726, lng:141.35270, blog:"224442237346",
+    memo:"니조시장에서 도보 3분 · 아케이드 상점가" },
+  { name:"파르코 백화점", jp:"札幌PARCO", area:"삿포로", cat:"쇼핑", sub:"백화점",
+    lat:43.05900, lng:141.35360, approx:true, blog:"224466802207",
+    memo:"스프카레 웨이팅 중 쇼핑" },
+  { name:"산리오 기프트 게이트", area:"삿포로", cat:"쇼핑", sub:"캐릭터",
+    lat:43.067222, lng:141.351499, gmap:"https://maps.google.com/?cid=1187642459344315785",
+    memo:"산리오 캐릭터 굿즈 · 삿포로역 근처" },
+  { name:"다이소 (스스키노 빌딩 2층)", area:"삿포로", cat:"쇼핑", sub:"잡화·할인",
+    lat:43.055345, lng:141.353790, gmap:"https://maps.google.com/?cid=3246310316074021285",
+    memo:"스스키노 빌딩 2층에 다이소" },
+  { name:"스누피 빌리지 오타루점", jp:"スヌーピービレッジ小樽店", area:"오타루", cat:"쇼핑", sub:"캐릭터",
+    lat:43.192600, lng:141.006400, approx:true,
+    memo:"스누피 굿즈 · 사카이마치 거리" },
+  { name:"다이마루 후지이 센트럴", jp:"大丸藤井セントラル", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
+    lat:43.058956, lng:141.353614,
+    memo:"문구·화방 전문 백화점 · 남1조서3" },
+  { name:"로프트", jp:"札幌ロフト", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
+    lat:43.057614, lng:141.353276,
+    memo:"생활잡화·문구·화장품" },
+  { name:"빌리지 뱅가드", jp:"ヴィレッジヴァンガード 札幌", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
+    lat:43.057400, lng:141.351500, approx:true,
+    memo:"⚠️ 지점 위치 확인 필요 → 구글지도 버튼으로 가까운 지점 검색\n서점 겸 B급 잡화점" },
+  { name:"GU", jp:"GU 札幌", area:"삿포로", cat:"쇼핑", sub:"의류",
+    lat:43.066242, lng:141.353048,
+    memo:"유니클로 자매 브랜드 · 저렴한 의류 (면세 가능 매장 확인)" },
+  { name:"공항 국내선 2층 디저트 쇼핑", jp:"新千歳空港 国内線 2階 ショッピング", area:"공항", cat:"쇼핑", sub:"기념품",
+    lat:42.78700, lng:141.68260, approx:true, blog:"224452825638",
+    memo:"백화점 식품관 느낌 · 키타카로(바움쿠헨, C컵 푸딩), 롯카테이, 카마에이, 비에이 콘빵\n소프트아이스크림, 기내 간식" },
+  { name:"르타오 (신치토세 공항)", jp:"ルタオ 新千歳空港", area:"공항", cat:"쇼핑", sub:"기념품", chain:"르타오",
+    lat:42.78705, lng:141.68275, approx:true, blog:"224455198594",
+    memo:"더블 프로마쥬: 결제 시 보냉백(약 100엔) 꼭 요청\n해동 후 2일 내 먹기" },
+  { name:"롯카테이 (신치토세 공항)", jp:"六花亭 新千歳空港", area:"공항", cat:"쇼핑", sub:"기념품", chain:"롯카테이",
+    lat:42.78695, lng:141.68245, approx:true, blog:"224455198594",
+    memo:"마루세이 버터샌드 · 건포도 호불호, 유통기한 약 10일" },
+  { name:"기타카로 (신치토세 공항)", jp:"北菓楼 新千歳空港", area:"공항", cat:"쇼핑", sub:"기념품", chain:"기타카로",
+    lat:42.78690, lng:141.68265, approx:true, blog:"224452825638",
+    memo:"바움쿠헨, C컵 푸딩" },
+  { name:"카마에이 (신치토세 공항)", jp:"かま栄 新千歳空港", area:"공항", cat:"쇼핑", sub:"기념품", chain:"카마에이",
+    lat:42.78710, lng:141.68240, approx:true, blog:"224452825638",
+    memo:"어묵 · 빵롤" },
+  { name:"시로이코이비토 (면세점)", jp:"白い恋人 新千歳空港", area:"공항", cat:"쇼핑", sub:"기념품",
+    lat:42.78900, lng:141.67950, approx:true, blog:"224455198594",
+    memo:"호불호 없는 1위 · 개별포장 · 유통기한 4~6개월 → 직장 선물용" },
+  { name:"에비소바 이치겐 (공항 라멘도조)", jp:"えびそば一幻 新千歳空港", area:"공항", cat:"식당", sub:"라멘", chain:"에비소바 이치겐",
+    lat:42.78685, lng:141.68320, approx:true, blog:"224452825638",
+    memo:"국내선 3층 홋카이도 라멘도조 (라멘집 10곳)\n본점보다 회전율 빨라 웨이팅 적음" },
+
+  /* ---------- 📌 기타 · 교통 ---------- */
+  { name:"삿포로역", jp:"札幌駅", area:"삿포로", cat:"기타", sub:"교통", lat:43.068661, lng:141.350755, gmap:"https://maps.google.com/?cid=11953311579560888229",
+    memo:"JR 쾌속 에어포트 → 오타루 / 신치토세 공항" },
+  { name:"스스키노역", jp:"すすきの駅", area:"삿포로", cat:"기타", sub:"교통", lat:43.05536, lng:141.35338,
+    memo:"난보쿠선 · 스스키노 맛집 거리 중심" },
+  { name:"미나미오타루역 (여기서 하차!)", jp:"南小樽駅", area:"오타루", cat:"기타", sub:"교통", lat:43.18670, lng:141.00778, blog:"224457441022",
+    memo:"✅ 여기서 내리기! 오르골당 바로 근처\n운하까지 내리막길 → 오르골당부터 관광" },
+  { name:"오타루역", jp:"小樽駅", area:"오타루", cat:"기타", sub:"교통", lat:43.197698, lng:140.993690, gmap:"https://maps.google.com/?cid=5016398990709404523", blog:"224457441022",
+    memo:"종점 · 삼각시장 바로 옆 · 여기서 시작하면 오르막" },
+  { name:"신치토세 공항", jp:"新千歳空港", area:"공항", cat:"기타", sub:"교통", lat:42.779132, lng:141.686636, gmap:"https://maps.google.com/?cid=1925957880204657142", blog:"224452825638",
+    memo:"국제선 면세구역은 작음 → 수속 전 국내선 구경 추천\n국제선↔국내선은 스마일로드로 연결" },
+  { name:"하코다테 공항", area:"하코다테", cat:"기타", sub:"교통",
+    lat:41.775704, lng:140.815822, gmap:"https://maps.google.com/?cid=10482774615839126032",
+    memo:"하코다테 공항" },
+];
+
+const CATS = {
+  "식당":  {icon:"🍜", color:"#e5484d"},
+  "놀거리":{icon:"🎡", color:"#30a46c"},
+  "쇼핑":  {icon:"🛍️", color:"#0091ff"},
+  "기타":  {icon:"📌", color:"#6f6e77"},
+};
+const AREAS = ["삿포로","오타루","공항","하코다테","전체"];
+const BLOG = "https://m.blog.naver.com/happ-py/";
+/* ===================================================================== */
+
+const store = {
+  get(k,d){ try{ const v=JSON.parse(localStorage.getItem(k)); return v ?? d; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const marks = store.get("sapporo-marks",{});
+
+PLACES.forEach((p,i)=>p.id=i);
+const state = { area:store.get("sapporo-area","삿포로"), cat:null, sub:null, chain:null, me:null };
+
+const map = L.map("map",{zoomControl:false}).setView([43.0580,141.3530],15);
+L.control.zoom({position:"topright"}).addTo(map);
+L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{
+  maxZoom:19, attribution:'Tiles &copy; Esri'
+}).addTo(map);
+
+const layer = L.layerGroup().addTo(map);
+const markers = {};
+let meMarker = null;
+
+const gmapUrl = p => p.gmap || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p.jp || p.name)}`;
+const dirUrl  = p => `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=transit`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function dist(p){
+  if(!state.me) return null;
+  const R=6371000, r=Math.PI/180;
+  const dLat=(p.lat-state.me[0])*r, dLng=(p.lng-state.me[1])*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(state.me[0]*r)*Math.cos(p.lat*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
+const fmtDist = m => m==null ? "" : m<1000 ? `${Math.round(m)}m` : `${(m/1000).toFixed(1)}km`;
+
+const inArea = p => state.area==="전체" || p.area===state.area;
+function filtered(){
+  return PLACES.filter(p=>{
+    if(state.chain) return p.chain===state.chain;   // 체인은 지역 상관없이 전 지점
+    if(!inArea(p)) return false;
+    if(state.cat && p.cat!==state.cat) return false;
+    if(state.sub && p.sub!==state.sub) return false;
+    return true;
+  });
+}
+
+function renderAreas(){
+  const el=document.getElementById("areas"); el.innerHTML="";
+  AREAS.forEach(a=>{
+    const b=document.createElement("button");
+    b.className="area"+(state.area===a?" on":"");
+    b.textContent=a==="하코다테"?"🌉 하코다테":a==="공항"?"✈️ 공항":a==="오타루"?"⛵ 오타루":a==="삿포로"?"🏙️ 삿포로":"전체";
+    b.onclick=()=>{ state.area=a; state.sub=null; state.chain=null; store.set("sapporo-area",a); render(true); };
+    el.appendChild(b);
+  });
+}
+
+function renderCats(){
+  const el=document.getElementById("cats"); el.innerHTML="";
+  Object.entries(CATS).forEach(([name,c])=>{
+    const n=PLACES.filter(p=>p.cat===name && inArea(p)).length;
+    const b=document.createElement("button");
+    b.className="cat"+(state.cat===name?" on":"");
+    if(state.cat===name) b.style.background=c.color;
+    b.innerHTML=`${c.icon} ${name}<span class="n">${n}곳</span>`;
+    b.onclick=()=>{ state.cat = state.cat===name?null:name; state.sub=null; state.chain=null; render(true); };
+    el.appendChild(b);
+  });
+}
+
+function renderSubs(){
+  const el=document.getElementById("subs"); el.innerHTML="";
+  const pool = PLACES.filter(p=>inArea(p) && (!state.cat || p.cat===state.cat));
+  if(!pool.length){ el.innerHTML=`<div class="hint">아직 등록된 곳이 없어요</div>`; return; }
+  const chip=(label,on,fn,cls="")=>{
+    const b=document.createElement("button");
+    b.className="chip "+cls+(on?" on":"");
+    b.textContent=label; b.onclick=fn; el.appendChild(b);
+  };
+  chip("전체", !state.sub && !state.chain, ()=>{state.sub=null;state.chain=null;render(true);});
+  if(state.cat){
+    [...new Set(pool.map(p=>p.sub))].forEach(s=>{
+      const n=pool.filter(p=>p.sub===s).length;
+      chip(`${s} ${n}`, state.sub===s && !state.chain, ()=>{state.sub=state.sub===s?null:s;state.chain=null;render(true);});
+    });
+  }
+  const chains=[...new Set(pool.filter(p=>p.chain).map(p=>p.chain))];
+  if(chains.length){
+    const sp=document.createElement("div"); sp.className="sep"; el.appendChild(sp);
+    chains.forEach(c=>{
+      const n=PLACES.filter(p=>p.chain===c).length;
+      chip(`🔗 ${c} (${n})`, state.chain===c, ()=>{state.chain=state.chain===c?null:c;render(true);}, "chain");
+    });
+  }
+}
+
+function popupHtml(p){
+  const m=marks[p.name]||{};
+  const others = p.chain ? PLACES.filter(x=>x.chain===p.chain).length : 0;
+  return `
+    <div class="pp-name">${esc(p.name)}</div>
+    ${p.jp?`<div class="pp-jp">${esc(p.jp)}</div>`:""}
+    <span class="pp-tag">${CATS[p.cat]?.icon||""} ${esc(p.cat)} · ${esc(p.sub)}</span>
+    <span class="pp-tag">📍 ${esc(p.area)}</span>
+    ${p.chain?`<span class="pp-tag">🔗 ${esc(p.chain)}</span>`:""}
+    ${state.me?`<span class="pp-tag">↔ ${fmtDist(dist(p))}</span>`:""}
+    ${p.approx?`<div class="pp-warn">⚠️ 위치가 대략적이에요. 구글지도에서 확인하세요</div>`:""}
+    ${p.hours?`<div class="pp-hours">⏰ ${esc(p.hours)} <small>(블로그 기준)</small></div>`:""}
+    ${p.memo?`<div class="pp-memo">${esc(p.memo)}</div>`:""}
+    <div class="pp-btns">
+      <a class="main" href="${gmapUrl(p)}" target="_blank" rel="noopener">🕒 구글지도 · 오늘 영업/휴무 확인</a>
+      <a href="${dirUrl(p)}" target="_blank" rel="noopener">🚶 길찾기</a>
+      ${p.blog?`<a href="${BLOG}${p.blog}" target="_blank" rel="noopener">📝 블로그 후기</a>`:`<span></span>`}
+      ${others>1?`<button style="grid-column:1/-1" onclick="showChain(${p.id})">🔗 ${esc(p.chain)} 전 지점 보기 (${others})</button>`:""}
+      <button class="${m.star?"on":""}" onclick="toggleMark(${p.id},'star')">${m.star?"⭐ 가고 싶음":"☆ 가고 싶음"}</button>
+      <button class="${m.done?"on":""}" onclick="toggleMark(${p.id},'done')">${m.done?"✅ 다녀옴":"◻️ 다녀옴"}</button>
+      <button style="grid-column:1/-1" onclick="openWallet(${p.id})">💴 여기서 쓴 돈 기록</button>
+    </div>`;
+}
+
+function renderMap(fit){
+  layer.clearLayers();
+  const list=filtered();
+  list.forEach(p=>{
+    const c=CATS[p.cat]||CATS["기타"];
+    const m=marks[p.name]||{};
+    const icon=L.divIcon({className:"",iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-28],
+      html:`<div class="pin${m.done?" done":""}" style="background:${c.color}"><span>${m.star?"⭐":c.icon}</span></div>`});
+    const mk=L.marker([p.lat,p.lng],{icon}).bindPopup(()=>popupHtml(p),{autoPanPaddingTopLeft:[10,160],maxWidth:280});
+    mk.addTo(layer); markers[p.id]=mk;
+  });
+  if(fit && list.length){
+    const pts=list.map(p=>[p.lat,p.lng]);
+    if(pts.length===1) map.setView(pts[0],17);
+    else map.fitBounds(pts,{padding:[40,40],maxZoom:17});
+  }
+}
+
+function renderList(){
+  const list=filtered();
+  if(state.me) list.sort((a,b)=>dist(a)-dist(b));
+  const title = state.chain ? `🔗 ${state.chain} 전 지점` :
+                state.sub ? `${CATS[state.cat].icon} ${state.cat} › ${state.sub}` :
+                state.cat ? `${CATS[state.cat].icon} ${state.cat} 전체` : `${state.area==="전체"?"전체":state.area} 장소`;
+  document.getElementById("sheetTitle").innerHTML=`${esc(title)} <small>${list.length}곳</small>`;
+  const ul=document.getElementById("list");
+  ul.innerHTML = list.length ? "" : `<li class="empty">아직 등록된 곳이 없어요</li>`;
+  list.forEach((p,i)=>{
+    const c=CATS[p.cat]||CATS["기타"], m=marks[p.name]||{};
+    const li=document.createElement("li");
+    const nearest = state.chain && state.me && i===0 ? " · 가장 가까움" : "";
+    li.innerHTML=`<div class="dot" style="background:${c.color}22">${m.done?"✅":m.star?"⭐":c.icon}</div>
+      <div class="li-main"><div class="li-name">${esc(p.name)}</div>
+      <div class="li-meta">${esc(p.sub)}${p.chain?" · 🔗"+esc(p.chain):""}${nearest}${p.memo?" · "+esc(p.memo.split("\n")[0]):""}</div></div>
+      <div class="li-dist">${fmtDist(dist(p))}</div>`;
+    li.onclick=()=>{ map.setView([p.lat,p.lng],17); markers[p.id]?.openPopup(); };
+    ul.appendChild(li);
+  });
+}
+
+function render(fit){ renderAreas(); renderCats(); renderSubs(); renderMap(fit); renderList(); }
+
+window.showChain = id => { state.chain = PLACES[id].chain; map.closePopup(); render(true); };
+window.toggleMark = (id,key) => {
+  const p=PLACES[id]; marks[p.name]=marks[p.name]||{};
+  marks[p.name][key]=!marks[p.name][key]; store.set("sapporo-marks",marks);
+  render(false); markers[id]?.openPopup();
+};
+
+document.getElementById("tipBtn").onclick=()=>document.getElementById("tips").classList.add("open");
+document.getElementById("sheetHead").onclick=()=>{
+  const s=document.getElementById("sheet"); s.classList.toggle("min");
+  document.getElementById("toggle").textContent = s.classList.contains("min")?"펼치기 ▲":"접기 ▼";
+  setTimeout(()=>{map.invalidateSize();placeLocBtn();},50);
+};
+
+function placeLocBtn(){
+  document.getElementById("locBtn").style.bottom=(document.getElementById("sheet").offsetHeight+12)+"px";
+}
+document.getElementById("locBtn").onclick=()=>{
+  if(!navigator.geolocation){ alert("이 기기에서는 위치를 쓸 수 없어요"); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    state.me=[pos.coords.latitude,pos.coords.longitude];
+    if(meMarker) meMarker.setLatLng(state.me);
+    else meMarker=L.marker(state.me,{icon:L.divIcon({className:"",html:'<div class="me"></div>',iconSize:[16,16]})}).addTo(map);
+    map.setView(state.me,16); render(false);
+  },()=>alert("위치 권한을 허용해 주세요"),{enableHighAccuracy:true,timeout:10000});
+};
+
+/* ============================ 💴 지출 ============================ */
+const W_CATS = {"식비":"🍜","카페·간식":"🍦","쇼핑":"🛍️","교통":"🚃","숙소":"🏨","관광·입장료":"🎡","기타":"📌"};
+const W_PAYS = ["현금","신용카드","트래블카드","IC카드(교통)","기타"];
+let expenses = store.get("sapporo-expenses",[]);
+let wRate = store.get("sapporo-rate",950);
+let editingId = null;
+const $ = id => document.getElementById(id);
+const yen = n => "¥"+Math.round(n).toLocaleString("ko-KR");
+const won = n => "₩"+Math.round(n).toLocaleString("ko-KR");
+const toJpy = e => e.cur==="KRW" ? e.amount*100/wRate : e.amount;
+const toKrw = e => e.cur==="KRW" ? e.amount : e.amount*wRate/100;
+const today = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const saveExp = () => store.set("sapporo-expenses",expenses);
+
+$("wCat").innerHTML = Object.entries(W_CATS).map(([k,v])=>`<option value="${k}">${v} ${k}</option>`).join("");
+$("wPay").innerHTML = W_PAYS.map(x=>`<option>${x}</option>`).join("");
+$("wPlaces").innerHTML = PLACES.map(p=>`<option value="${esc(p.name)}">`).join("");
+$("wRate").value = wRate;
+$("wRate").oninput = e => { const v=parseFloat(e.target.value); if(v>0){ wRate=v; store.set("sapporo-rate",v); renderWallet(); } };
+
+function resetForm(keepDate){
+  editingId=null; $("wItem").value=""; $("wAmt").value=""; $("wSubmit").textContent="+ 추가";
+  if(!keepDate || !$("wDate").value) $("wDate").value=today();
+}
+$("wForm").onsubmit = ev => {
+  ev.preventDefault();
+  const amount=parseFloat($("wAmt").value);
+  if(!(amount>=0)) return;
+  const rec={ date:$("wDate").value, cat:$("wCat").value, item:$("wItem").value.trim(), amount, cur:$("wCur").value, pay:$("wPay").value };
+  if(editingId){ Object.assign(expenses.find(e=>e.id===editingId),rec); }
+  else expenses.push({id:Date.now()+"_"+Math.random().toString(36).slice(2,6), ...rec});
+  saveExp(); resetForm(true); renderWallet();
+};
+window.editExp = id => {
+  const e=expenses.find(x=>x.id===id); if(!e) return;
+  editingId=id; $("wDate").value=e.date; $("wCat").value=e.cat; $("wItem").value=e.item;
+  $("wAmt").value=e.amount; $("wCur").value=e.cur; $("wPay").value=e.pay;
+  $("wSubmit").textContent="✔ 수정 저장"; $("wForm").scrollIntoView({behavior:"smooth",block:"center"});
+};
+window.delExp = id => {
+  const e=expenses.find(x=>x.id===id);
+  if(e && confirm(`'${e.item}' 지출을 삭제할까요?`)){ expenses=expenses.filter(x=>x.id!==id); saveExp(); if(editingId===id) resetForm(true); renderWallet(); }
+};
+
+function bars(el, groups){
+  const max=Math.max(1,...Object.values(groups));
+  el.innerHTML = Object.keys(groups).length ? Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div class="wbar"><span class="lb">${W_CATS[k]?W_CATS[k]+" ":""}${esc(k)}</span><span class="tr"><span class="fl" style="width:${v/max*100}%"></span></span><span class="vl">${yen(v)}</span></div>`).join("")
+    : `<div class="wsub">아직 기록이 없어요</div>`;
+}
+function renderWallet(){
+  const tj=expenses.reduce((s,e)=>s+toJpy(e),0), tk=expenses.reduce((s,e)=>s+toKrw(e),0);
+  $("wTotal").textContent=yen(tj); $("wTotalKrw").textContent=`≈ ${won(tk)} · ${expenses.length}건`;
+  const byCat={}, byPay={}, byDay={};
+  expenses.forEach(e=>{ byCat[e.cat]=(byCat[e.cat]||0)+toJpy(e); byPay[e.pay]=(byPay[e.pay]||0)+toJpy(e); (byDay[e.date]=byDay[e.date]||[]).push(e); });
+  bars($("wByCat"),byCat); bars($("wByPay"),byPay);
+  const days=Object.keys(byDay).sort().reverse();
+  $("wList").innerHTML = days.length ? days.map(d=>{
+    const list=byDay[d], sum=list.reduce((s,e)=>s+toJpy(e),0);
+    const wd="일월화수목금토"[new Date(d+"T00:00").getDay()] || "";
+    return `<div class="wday">${esc(d.slice(5).replace("-","/"))} (${wd})<span>${yen(sum)} · ${won(list.reduce((s,e)=>s+toKrw(e),0))}</span></div>`+
+      list.map(e=>`<div class="witem"><span class="ic">${W_CATS[e.cat]||"📌"}</span>
+        <div class="mn" onclick="editExp('${e.id}')"><div class="nm">${esc(e.item)}</div><div class="mt">${esc(e.cat)} · ${esc(e.pay)}</div></div>
+        <div class="am">${e.cur==="KRW"?won(e.amount):yen(e.amount)}<small>${e.cur==="KRW"?"≈ "+yen(toJpy(e)):"≈ "+won(toKrw(e))}</small></div>
+        <button onclick="delExp('${e.id}')" title="삭제">🗑️</button></div>`).join("");
+  }).join("") : `<div class="wsub" style="margin-top:8px">위에서 첫 지출을 추가해 보세요</div>`;
+}
+window.openWallet = id => {
+  resetForm(false);
+  if(id!=null){ const p=PLACES[id]; $("wItem").value=p.name;
+    $("wCat").value = p.cat==="식당" ? (p.sub==="디저트·카페"||p.sub==="타코야키·간식"?"카페·간식":"식비") : p.cat==="쇼핑"?"쇼핑" : p.cat==="놀거리"?"관광·입장료" : p.sub==="교통"?"교통":"기타";
+    map.closePopup(); }
+  renderWallet(); $("wallet").classList.add("open");
+  if(id!=null) setTimeout(()=>$("wAmt").focus(),100);
+};
+window.closeWallet = () => $("wallet").classList.remove("open");
+$("walletBtn").onclick = () => openWallet(null);
+
+function loadXlsx(){
+  return window.XLSX ? Promise.resolve() : new Promise((ok,fail)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+    s.onload=ok; s.onerror=()=>{ s.remove(); fail(new Error("엑셀 기능을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.")); };
+    document.head.appendChild(s);
+  });
+}
+window.exportXlsx = async () => {
+  if(!expenses.length){ alert("저장할 지출이 없어요"); return; }
+  try{ await loadXlsx(); }catch(e){ alert(e.message); return; }
+  const rows=[...expenses].sort((a,b)=>a.date.localeCompare(b.date)).map(e=>({
+    "날짜":e.date, "분류":e.cat, "내용":e.item, "금액":e.amount, "통화":e.cur==="KRW"?"원":"엔",
+    "엔 환산":Math.round(toJpy(e)), "원 환산":Math.round(toKrw(e)), "결제수단":e.pay }));
+  const total={"날짜":"합계","분류":"","내용":"","금액":"","통화":"","엔 환산":rows.reduce((s,r)=>s+r["엔 환산"],0),"원 환산":rows.reduce((s,r)=>s+r["원 환산"],0),"결제수단":""};
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.json_to_sheet([...rows,total]);
+  ws1["!cols"]=[{wch:12},{wch:11},{wch:28},{wch:10},{wch:6},{wch:10},{wch:11},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws1,"지출내역");
+  const grp=key=>{ const g={}; expenses.forEach(e=>{ const k=e[key]; g[k]=g[k]||{n:0,j:0,k:0}; g[k].n++; g[k].j+=toJpy(e); g[k].k+=toKrw(e); }); return g; };
+  const sheet=(g,label)=>XLSX.utils.json_to_sheet(Object.entries(g).sort().map(([k,v])=>({[label]:k,"건수":v.n,"엔 환산":Math.round(v.j),"원 환산":Math.round(v.k)})));
+  XLSX.utils.book_append_sheet(wb,sheet(grp("date"),"날짜"),"날짜별");
+  XLSX.utils.book_append_sheet(wb,sheet(grp("cat"),"분류"),"분류별");
+  XLSX.utils.book_append_sheet(wb,sheet(grp("pay"),"결제수단"),"결제수단별");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([["환율 (100엔당 원)",wRate]]),"환율");
+  XLSX.writeFile(wb,`삿포로_지출_${today()}.xlsx`);
+};
+$("wFile").onchange = async ev => {
+  const f=ev.target.files[0]; ev.target.value=""; if(!f) return;
+  try{ await loadXlsx(); }catch(e){ alert(e.message); return; }
+  const wb=XLSX.read(await f.arrayBuffer());
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets["지출내역"]||wb.Sheets[wb.SheetNames[0]]);
+  const list=rows.filter(r=>r["날짜"] && r["날짜"]!=="합계" && r["금액"]!==undefined && r["금액"]!=="").map((r,i)=>({
+    id:Date.now()+"_"+i, date:String(r["날짜"]).slice(0,10), cat:r["분류"]||"기타", item:String(r["내용"]||""),
+    amount:Number(r["금액"])||0, cur:r["통화"]==="원"?"KRW":"JPY", pay:r["결제수단"]||"기타" }));
+  if(!list.length){ alert("불러올 지출 내역을 찾지 못했어요"); return; }
+  if(!confirm(`${list.length}건을 불러올까요?\n지금 기록된 ${expenses.length}건은 이 파일 내용으로 바뀌어요.`)) return;
+  expenses=list; saveExp(); renderWallet(); alert(`${list.length}건을 불러왔어요`);
+};
+
+window.addEventListener("resize",placeLocBtn);
+render(true); placeLocBtn();
+</script>
+</body>
+</html>
