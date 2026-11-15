@@ -2,12 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>삿포로 여행 지도</title>
 <meta name="theme-color" content="#1f6feb">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.css">
 <style>
 :root{--bg:#fff;--fg:#1c1c1f;--sub:#6b6b73;--line:#e4e4e8;--chip:#f2f2f5;--accent:#1f6feb}
 @media (prefers-color-scheme:dark){:root{--bg:#1b1b1f;--fg:#ededf0;--sub:#a0a0aa;--line:#33333a;--chip:#2a2a30;--accent:#4c8dff}}
@@ -107,20 +109,106 @@ header{padding:8px 12px 6px;padding-top:max(8px,env(safe-area-inset-top));backgr
 .witem button{border:0;background:none;color:var(--sub);font-size:15px;cursor:pointer;padding:4px;flex:none}
 .wtools{display:flex;gap:8px;flex-wrap:wrap}
 .wnote{font-size:12px;color:var(--sub);margin-top:8px;line-height:1.5}
+#plan{position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;padding:16px;padding-top:max(16px,env(safe-area-inset-top));display:none}
+#plan.open{display:block}
+#plan h2{font-size:18px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:center}
+#plan h2 button{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}
+#plan details{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+#plan summary{font-weight:700;cursor:pointer;font-size:15px}
+#plan ul{margin:10px 0 0;padding-left:18px;font-size:14px;line-height:1.6}
+#plan a{color:var(--accent)}
+#planBtn{flex:none;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+#plan .row{display:flex;gap:10px;padding:7px 0;border-top:1px dashed var(--line);font-size:14px;line-height:1.5}
+#plan .row:first-of-type{border-top:0}
+#plan .t{flex:none;width:44px;color:var(--sub);font-variant-numeric:tabular-nums}
+#plan .what b{display:block}
+#plan .what small{color:var(--sub);display:block;white-space:pre-line}
+#plan .go{border:1px solid var(--line);background:var(--chip);color:var(--fg);border-radius:999px;padding:2px 8px;font-size:12px;margin:3px 4px 0 0;cursor:pointer;font-family:inherit}
+#plan table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+#plan td{padding:5px 2px;border-top:1px solid var(--line)}
+#plan td.r{text-align:right;font-variant-numeric:tabular-nums}
+@media (max-width:440px){.bl{display:none}#planBtn,#walletBtn,#tipBtn{padding:6px 8px;font-size:16px}}
+#langBtn{position:absolute;left:12px;z-index:1000;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;box-shadow:0 2px 8px #0003;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
 <header>
-  <div id="topRow"><div id="areas"></div><button id="walletBtn">💴 지출</button><button id="tipBtn">💡 팁</button></div>
+  <div id="topRow"><div id="areas"></div><button id="planBtn">📅<span class="bl"> 일정</span></button><button id="walletBtn">💴<span class="bl"> 지출</span></button><button id="tipBtn">💡<span class="bl"> 팁</span></button></div>
   <div id="cats"></div>
   <div id="subs"></div>
 </header>
 <div id="map"></div>
 <button id="locBtn" title="내 위치">◎</button>
+<button id="langBtn" title="지도 글자 언어"></button>
 <section id="sheet">
   <div id="sheetHead"><span id="sheetTitle"></span><small id="toggle">접기 ▼</small></div>
   <ul id="list"></ul>
 </section>
+
+<div id="plan">
+  <h2>📅 여행 일정 <button onclick="document.getElementById('plan').classList.remove('open')">닫기</button></h2>
+  <details open><summary>✈️ 출발 전</summary>
+    <div class="row"><div class="t"></div><div class="what"><b>Visit Japan Web 입국신고 미리 하기</b><small><a href="https://www.vjw.digital.go.jp/main/" target="_blank" rel="noopener">vjw.digital.go.jp 열기</a></small></div></div>
+  </details>
+  <details open><summary>Day 1 · 1/16 (토) 도착 → 삿포로</summary>
+    <div class="row"><div class="t">14:10</div><div class="what"><b>인천공항 T2 출발</b><small>신치토세 공항행</small></div></div>
+    <div class="row"><div class="t">17:00</div><div class="what"><b>공항 도착 → 삿포로 이동</b><small>💴 엔화 현금 인출
+🎫 월·화 기차표 미리 사두기
+공항→삿포로 지정석 2,000엔</small><button class="go" onclick="goPlace('신치토세 공항')">📍 신치토세 공항</button></div></div>
+    <div class="row"><div class="t">18:30</div><div class="what"><b>그랑벨 호텔 체크인</b><small>25층 대욕장 (수건 지참) · 26층 라운지</small><button class="go" onclick="goPlace('스스키노 그랑벨 호텔 (1/16~18)')">📍 스스키노 그랑벨 호텔</button></div></div>
+    <div class="row"><div class="t">19:30</div><div class="what"><b>저녁 식사</b><small>호텔 근처 식당 탐색 → 지도에서 '식당' 누르고 ◎ 내 위치</small></div></div>
+    <div class="row"><div class="t">20:30</div><div class="what"><b>오도리 공원 야경 & 돈키호테</b><small>편의점 간식 구매</small><button class="go" onclick="goPlace('오도리 공원')">📍 오도리 공원</button><button class="go" onclick="goPlace('메가 돈키호테 (다누키코지)')">📍 메가 돈키호테</button></div></div>
+    <div class="row"><div class="t">22:00</div><div class="what"><b>호텔 온천</b><small>스파 운영 ~25:00</small></div></div>
+  </details>
+  <details><summary>Day 2 · 1/17 (일) 삿포로</summary>
+    <div class="row"><div class="t">09:00</div><div class="what"><b>장외시장 / 니조시장 아침</b><small>장외시장: 삿포로 최대 해산물 도매시장 옆 (오타루 가기 전 1/18에 가도 됨)
+호텔 근처는 니조시장 (오이소·돈베이·다이치 카이센마루)</small><button class="go" onclick="goPlace('삿포로 장외시장')">📍 삿포로 장외시장</button><button class="go" onclick="goPlace('니조시장')">📍 니조시장</button><button class="go" onclick="goPlace('다이치 카이센마루 (니조시장)')">📍 다이치 카이센마루</button></div></div>
+    <div class="row"><div class="t"></div><div class="what"><b>걸으면서 구경</b><small>빌리지 뱅가드!! · 홋카이도 구본청사 · 시계탑 · TV타워</small><button class="go" onclick="goPlace('빌리지 뱅가드 (도큐백화점)')">📍 빌리지 뱅가드</button><button class="go" onclick="goPlace('홋카이도 구본청사 (아카렌가)')">📍 홋카이도 구본청사</button><button class="go" onclick="goPlace('삿포로 시계탑')">📍 삿포로 시계탑</button><button class="go" onclick="goPlace('삿포로 TV타워')">📍 삿포로 TV타워</button></div></div>
+    <div class="row"><div class="t">12:00</div><div class="what"><b>점심 스프카레</b><small>✅ 예약하기</small><button class="go" onclick="goPlace('스프카레 가라쿠 본점')">📍 스프카레 가라쿠 본점</button><button class="go" onclick="goPlace('수프카레 스아게+ (본점)')">📍 수프카레 스아게+</button></div></div>
+    <div class="row"><div class="t">18:00</div><div class="what"><b>저녁 징기스칸</b><small>✅ 예약하기</small><button class="go" onclick="goPlace('다루마 6.4점')">📍 다루마 6.4점</button><button class="go" onclick="goPlace('요조라노 징기스칸 본점')">📍 요조라노 징기스칸 본점</button></div></div>
+    <div class="row"><div class="t">20:00</div><div class="what"><b>간식</b><small>오코노미야키 · 타코야키 · 편의점</small><button class="go" onclick="goPlace('긴다코')">📍 긴다코</button><button class="go" onclick="goPlace('타코야키와 하이볼 타누키코지 본점')">📍 타코야키와 하이볼 타누키코지 본점</button></div></div>
+  </details>
+  <details><summary>Day 3 · 1/18 (월) 오타루</summary>
+    <div class="row"><div class="t">09:00</div><div class="what"><b>장외시장 / 니조시장 아침</b><button class="go" onclick="goPlace('삿포로 장외시장')">📍 삿포로 장외시장</button><button class="go" onclick="goPlace('니조시장')">📍 니조시장</button></div></div>
+    <div class="row"><div class="t">10:00</div><div class="what"><b>삿포로역 → 오타루 기차</b><small>미리 끊어둔 기차 · 자유석 800 / 지정석 1,800엔
+💡 오르골당부터 보려면 미나미오타루역에서 내리기</small><button class="go" onclick="goPlace('삿포로역')">📍 삿포로역</button><button class="go" onclick="goPlace('미나미오타루역 (여기서 하차!)')">📍 미나미오타루역</button></div></div>
+    <div class="row"><div class="t">11:00</div><div class="what"><b>도미인 오타루 (짐 맡기기·체크인)</b><button class="go" onclick="goPlace('도미 인 프리미엄 오타루 (1/18~19)')">📍 도미 인 프리미엄 오타루</button></div></div>
+    <div class="row"><div class="t">12:00</div><div class="what"><b>점심</b><small>호텔 근처 식당 탐색 · 삼각시장 바로 옆</small><button class="go" onclick="goPlace('삼각시장')">📍 삼각시장</button></div></div>
+    <div class="row"><div class="t">13:00</div><div class="what"><b>오타루 구경</b><small>오르골당 → 사카이마치 (디저트·유리공예·르타오·미피) → 오타루 운하
+⚠️ 상점가는 17~18시 마감</small><button class="go" onclick="goPlace('오타루 오르골당 본관')">📍 오타루 오르골당 본관</button><button class="go" onclick="goPlace('사카이마치도리 상점가')">📍 사카이마치도리 상점가</button><button class="go" onclick="goPlace('르타오 본점')">📍 르타오 본점</button><button class="go" onclick="goPlace('미피 (사카이마치)')">📍 미피</button><button class="go" onclick="goPlace('오타루 운하')">📍 오타루 운하</button></div></div>
+    <div class="row"><div class="t"></div><div class="what"><b>(선택) 오타루 수족관</b><small>성인 1,300엔</small><button class="go" onclick="goPlace('오타루 수족관')">📍 오타루 수족관</button></div></div>
+    <div class="row"><div class="t">18:00</div><div class="what"><b>저녁 · 초밥거리</b><button class="go" onclick="goPlace('오타루 초밥거리 (스시야도리)')">📍 오타루 초밥거리</button><button class="go" onclick="goPlace('마사즈시 본점')">📍 마사즈시 본점</button></div></div>
+    <div class="row"><div class="t">20:00</div><div class="what"><b>숙소 휴식</b><small>🍜 21:30~23:00 2층 레스토랑 무료 라멘 · 2층 안마의자</small><button class="go" onclick="goPlace('도미 인 프리미엄 오타루 (1/18~19)')">📍 도미 인 프리미엄 오타루</button></div></div>
+    <div class="row"><div class="t"></div><div class="what"><b>(선택) 돈키호테 · 이온몰</b><button class="go" onclick="goPlace('이온 오타루 (윙베이 오타루)')">📍 이온 오타루</button></div></div>
+  </details>
+  <details><summary>Day 4 · 1/19 (화) 오타루 → 귀국</summary>
+    <div class="row"><div class="t">08:00</div><div class="what"><b>호텔 조식</b><small>6:30~10:00</small></div></div>
+    <div class="row"><div class="t">10:00</div><div class="what"><b>삼각시장</b><small>카이센동 · 14~15시면 재료 소진</small><button class="go" onclick="goPlace('삼각시장')">📍 삼각시장</button><button class="go" onclick="goPlace('타키나미 식당 (삼각시장)')">📍 타키나미 식당</button></div></div>
+    <div class="row"><div class="t">14:00</div><div class="what"><b>오타루역 → 신치토세 공항</b><small>약 1시간 30분 · 1인 열차 3,040 / 버스 2,230엔</small><button class="go" onclick="goPlace('오타루역')">📍 오타루역</button></div></div>
+    <div class="row"><div class="t"></div><div class="what"><b>국내선 구경</b><small>2층 디저트 · 3층 라멘도조 · 로이스 초콜릿 월드</small><button class="go" onclick="goPlace('공항 국내선 2층 디저트 쇼핑')">📍 공항 국내선 2층 디저트 쇼핑</button><button class="go" onclick="goPlace('로이스 초콜릿 월드')">📍 로이스 초콜릿 월드</button></div></div>
+    <div class="row"><div class="t">18:00</div><div class="what"><b>비행기 탑승</b></div></div>
+  </details>
+  <details><summary>💳 미리 낸 비용</summary>
+    <table>
+      <tr><td>비행기표</td><td>정산완</td><td class="r">₩1,152,200</td></tr>
+      <tr><td>삿포로 숙소 (그랑벨)</td><td>복지카드</td><td class="r">₩367,238</td></tr>
+      <tr><td>오타루 숙소 (도미인)</td><td>복지카드</td><td class="r">₩211,919</td></tr>
+      <tr><td>보험</td><td>정산완</td><td class="r">₩19,610</td></tr>
+      <tr><td>유심 · 방수신발</td><td colspan="2" class="r">미정</td></tr>
+      <tr><td><b>합계</b></td><td></td><td class="r"><b>₩1,750,967</b></td></tr>
+    </table>
+  </details>
+  <details><summary>📚 참고 링크 (구글 시트)</summary><ul>
+    <li><a href="https://m.blog.naver.com/happ-py/224472599415" target="_blank" rel="noopener">징기스칸 웨이팅 피하는 법 (happ-py)</a></li>
+    <li><a href="https://m.blog.naver.com/happ-py/224458817188" target="_blank" rel="noopener">스프카레 비교 (happ-py)</a></li>
+    <li><a href="https://blog.naver.com/meokssu0606/224473570576" target="_blank" rel="noopener">meokssu0606 블로그</a></li>
+    <li><a href="https://blog.naver.com/zuwa__a/224424136798" target="_blank" rel="noopener">zuwa__a 블로그</a></li>
+    <li><a href="https://m.blog.naver.com/su2day/224158571794" target="_blank" rel="noopener">식당들 설명 (su2day)</a></li>
+    <li><a href="https://m.blog.naver.com/su2day/224156057830" target="_blank" rel="noopener">놀거리 정리 (su2day)</a></li>
+    <li><a href="https://blog.naver.com/moments_zip/224469228833" target="_blank" rel="noopener">신치토세 공항 (moments_zip)</a></li>
+    <li><a href="https://youtu.be/EOUkhS8T5ik" target="_blank" rel="noopener">식당 유튜브 영상</a></li>
+  </ul></details>
+</div>
 
 <div id="tips">
   <h2>💡 여행 팁 <button onclick="document.getElementById('tips').classList.remove('open')">닫기</button></h2>
@@ -205,10 +293,12 @@ header{padding:8px 12px 6px;padding-top:max(8px,env(safe-area-inset-top));backgr
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/4.7.1/maplibre-gl.min.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
 <script>
 /* =====================================================================
    ✏️ 가게 데이터 — 여기만 고치면 돼요
-   - area  : 삿포로 / 오타루 / 공항
+   - area  : 삿포로 / 오타루 / 공항 / 하코다테
    - cat   : 식당 / 놀거리 / 쇼핑 / 기타
    - sub   : 소분류 (새로 쓰면 버튼이 자동으로 생겨요)
    - chain : 체인점이면 체인 이름 (같은 이름끼리 묶여요)
@@ -287,7 +377,7 @@ const PLACES = [
     lat:43.05470, lng:141.35423, hours:"18:00-02:00 · 일·월 정기휴무", blog:"224431719155",
     memo:"💴 현금만 · 바 6석, 회전 빠름 · 현지인 단골 맛집\n미소 980엔(시그니처), 카라쿠치 1,060엔(신라면 맵기)\n버터콘 토핑 추천, 삶은 계란 무료" },
   { name:"테시카가 라멘 (라멘요코초)", jp:"弟子屈ラーメン 札幌", area:"삿포로", cat:"식당", sub:"라멘",
-    lat:43.05476, lng:141.35432, approx:true, blog:"224431719155",
+    lat:43.054871, lng:141.354339, gmap:"https://maps.google.com/?cid=12372647347263809835", blog:"224431719155",
     memo:"요코초 유명 라멘 · 1시간 30분 이상 웨이팅\n(블로거는 앞의 시라카바산소로 감)" },
   { name:"에비소바 이치겐 본점", jp:"えびそば一幻 総本店", area:"삿포로", cat:"식당", sub:"라멘", chain:"에비소바 이치겐",
     lat:43.05127, lng:141.34547, hours:"11:00-03:00", blog:"224434867962",
@@ -358,7 +448,7 @@ const PLACES = [
     lat:43.19200, lng:141.00700, approx:true, blog:"224457441022",
     memo:"마루세이 버터샌드 · 사카이마치도리" },
   { name:"카마에이 공장직매점", jp:"かま栄 工場直売店 小樽", area:"오타루", cat:"식당", sub:"디저트·카페", chain:"카마에이",
-    lat:43.19571, lng:141.00507, blog:"224430956083",
+    lat:43.195798, lng:141.004869, gmap:"https://maps.google.com/?cid=16919636097366085168", blog:"224430956083",
     memo:"100년 역사 어묵 · 빵롤(판로루) 유명" },
   { name:"사와와", jp:"茶和々 小樽", area:"오타루", cat:"식당", sub:"디저트·카페",
     lat:43.19230, lng:141.00660, approx:true, blog:"224430956083",
@@ -379,6 +469,22 @@ const PLACES = [
   { name:"타코야키와 하이볼 타누키코지 본점", area:"삿포로", cat:"식당", sub:"타코야키·간식",
     lat:43.057226, lng:141.352303, gmap:"https://maps.google.com/?cid=13342161979996656665",
     memo:"타코야키 + 하이볼 (구글 저장 목록)" },
+
+  /* ---------- ➕ 구글 저장 목록 · 일정표에서 추가 (2026-11-15) ---------- */
+  { name:"다이치 카이센마루 (니조시장)", area:"삿포로", cat:"식당", sub:"스시·해산물", lat:43.058542, lng:141.358612, gmap:"https://maps.google.com/?cid=16876063219990639866", memo:"니조시장 안 유명 카이센동집\n⏰ 아침 7~8시에는 도착해야 함" },
+  { name:"삿포로 장외시장", jp:"札幌場外市場", area:"삿포로", cat:"식당", sub:"스시·해산물", lat:43.070123, lng:141.321461, gmap:"https://maps.google.com/?cid=16843740269574437518", memo:"삿포로에서 가장 큰 해산물 도매시장 옆 시장\n오타루 이동 전에 가도 됨 (1/17·1/18 아침 일정)" },
+  { name:"사와사키수산", area:"오타루", cat:"식당", sub:"스시·해산물", lat:43.197422, lng:141.002899, gmap:"https://maps.google.com/?cid=16338744006811198754", memo:"오타루 해산물 (구글 저장 목록)" },
+  { name:"오타루 초밥거리 (스시야도리)", jp:"小樽 寿司屋通り", area:"오타루", cat:"식당", sub:"스시·해산물", lat:43.194428, lng:140.998379, memo:"초밥집이 모인 거리 · 마사즈시 본점도 여기\n1/18(월) 저녁 일정" },
+  { name:"아루코 양고기", area:"삿포로", cat:"식당", sub:"양고기", lat:43.056389, lng:141.347781, gmap:"https://maps.google.com/?cid=7266955873501632862", memo:"징기스칸 (구글 저장 목록)" },
+  { name:"삿포로 징기스칸 양자리", area:"삿포로", cat:"식당", sub:"양고기", lat:43.052647, lng:141.352198, gmap:"https://maps.google.com/?cid=17346808801822605832", memo:"징기스칸 (구글 저장 목록) · 스스키노" },
+  { name:"라마이 삿포로 중앙점", area:"삿포로", cat:"식당", sub:"스프카레", lat:43.054725, lng:141.343441, gmap:"https://maps.google.com/?cid=18194825813941315729", memo:"스프카레 (구글 저장 목록)" },
+  { name:"수프카레 킹 센트럴점", area:"삿포로", cat:"식당", sub:"스프카레", lat:43.058082, lng:141.35356, gmap:"https://maps.google.com/?cid=11288501125129571132", memo:"스프카레 (구글 저장 목록) · 남1조" },
+  { name:"야키토리 타케토리", area:"삿포로", cat:"식당", sub:"이자카야·로바다야키", lat:43.056358, lng:141.356879, gmap:"https://maps.google.com/?cid=12941663243331645416", memo:"꼬치구이 (구글 저장 목록)" },
+  { name:"로바다야 쿠시로", area:"삿포로", cat:"식당", sub:"이자카야·로바다야키", lat:43.052858, lng:141.353866, gmap:"https://maps.google.com/?cid=10735926536092683162", memo:"로바다야키 (화로 해산물 구이) · 스스키노" },
+  { name:"로바다야키 우타리", area:"삿포로", cat:"식당", sub:"이자카야·로바다야키", lat:43.053889, lng:141.352022, gmap:"https://maps.google.com/?cid=14932708735458690458", memo:"로바다야키 (화로 해산물 구이) · 스스키노" },
+  { name:"요이치야 삿포로미나미2조점", area:"삿포로", cat:"식당", sub:"이자카야·로바다야키", lat:43.058752, lng:141.35832, gmap:"https://maps.google.com/?cid=16110692947407344397", memo:"구글 저장 목록 · 메뉴는 구글지도에서 확인" },
+  { name:"토시 함바그", area:"삿포로", cat:"식당", sub:"정식·별미", lat:43.059064, lng:141.354788, gmap:"https://maps.google.com/?cid=12298518638388304122", memo:"함박스테이크 (구글 저장 목록)" },
+  { name:"마지산도", area:"삿포로", cat:"식당", sub:"디저트·카페", lat:43.057815, lng:141.356585, gmap:"https://maps.google.com/?cid=14983311764392811701", memo:"구글 저장 목록 · 메뉴는 구글지도에서 확인" },
 
   /* ---------- 🎡 놀거리 ---------- */
   { name:"삿포로 TV타워", jp:"さっぽろテレビ塔", area:"삿포로", cat:"놀거리", sub:"관광명소",
@@ -413,18 +519,23 @@ const PLACES = [
     lat:42.78660, lng:141.68230, approx:true, hours:"10:00-익일 09:00 (접수 마감 07:00)", blog:"224452825638",
     memo:"국내선 4층 오아시스파크 (영화관 맞은편)\n성인 2,600엔 / 새벽 1시 이후 2,000엔\n수건·유카타 포함 · 노천탕, 사우나, 수면실\n문신·스티커 입장 불가" },
 
+  { name:"삿포로 시계탑", jp:"札幌市時計台", area:"삿포로", cat:"놀거리", sub:"관광명소", lat:43.062554, lng:141.353645, memo:"삿포로 상징 · 1/17(일) 걸으며 구경 코스" },
+  { name:"홋카이도 구본청사 (아카렌가)", jp:"北海道庁旧本庁舎", area:"삿포로", cat:"놀거리", sub:"관광명소", lat:43.063966, lng:141.348024, memo:"붉은 벽돌 옛 도청 · 1/17(일) 걸으며 구경 코스\n(리뉴얼 공사 여부 구글지도에서 확인)" },
+  { name:"오타루 수족관", jp:"おたる水族館", area:"오타루", cat:"놀거리", sub:"체험·박물관", lat:43.237007, lng:141.011402, memo:"💴 성인 1,300엔 (일정표)\n오타루역에서 버스 약 25분 · 겨울 운영시간 구글지도로 확인" },
+  { name:"미피 (사카이마치)", jp:"ミッフィー 小樽 堺町", area:"오타루", cat:"쇼핑", sub:"캐릭터", lat:43.1925, lng:141.0068, approx:true, memo:"일정표 '사카이마치-디저트, 유리공예, 르타오, 미피'\n⚠️ 정확한 가게는 구글지도 버튼으로 검색" },
+
   /* ---------- 🛍️ 쇼핑 ---------- */
   { name:"포켓몬센터 삿포로 (다이마루 8층)", jp:"ポケモンセンターサッポロ", area:"삿포로", cat:"쇼핑", sub:"캐릭터",
     lat:43.06770, lng:141.34930, approx:true, blog:"224458663317",
     memo:"한정판 피카츄 인형 · 스텔라플레이스와 연결" },
   { name:"디즈니스토어·무인양품 (스텔라플레이스 5층)", jp:"札幌ステラプレイス", area:"삿포로", cat:"쇼핑", sub:"캐릭터",
-    lat:43.06805, lng:141.35099, blog:"224458663317",
+    lat:43.068110, lng:141.351804, gmap:"https://maps.google.com/?cid=957704132955663800", blog:"224458663317",
     memo:"하나마루 웨이팅 중 들르기 좋은 동선" },
   { name:"메가 돈키호테 (다누키코지)", jp:"MEGAドン・キホーテ 札幌狸小路本店", area:"삿포로", cat:"쇼핑", sub:"잡화·할인",
     lat:43.05700, lng:141.35280, approx:true, blog:"224447343146",
     memo:"아이젠 1,000~2,000엔, 방수 스프레이 700~1,000엔\n가라쿠 웨이팅 중 쇼핑 추천" },
   { name:"다누키코지 상점가", jp:"狸小路商店街", area:"삿포로", cat:"쇼핑", sub:"잡화·할인",
-    lat:43.05726, lng:141.35270, blog:"224442237346",
+    lat:43.057239, lng:141.352677, gmap:"https://maps.google.com/?cid=4470248669125351329", blog:"224442237346",
     memo:"니조시장에서 도보 3분 · 아케이드 상점가" },
   { name:"파르코 백화점", jp:"札幌PARCO", area:"삿포로", cat:"쇼핑", sub:"백화점",
     lat:43.05900, lng:141.35360, approx:true, blog:"224466802207",
@@ -439,16 +550,16 @@ const PLACES = [
     lat:43.192600, lng:141.006400, approx:true,
     memo:"스누피 굿즈 · 사카이마치 거리" },
   { name:"다이마루 후지이 센트럴", jp:"大丸藤井セントラル", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
-    lat:43.058956, lng:141.353614,
-    memo:"문구·화방 전문 백화점 · 남1조서3" },
+    lat:43.058968, lng:141.353697, gmap:"https://maps.google.com/?cid=12415751671290177438",
+    memo:"문구·화방 전문 백화점 · 남1조서3\n문구류 구경" },
   { name:"로프트", jp:"札幌ロフト", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
     lat:43.057614, lng:141.353276,
     memo:"생활잡화·문구·화장품" },
-  { name:"빌리지 뱅가드", jp:"ヴィレッジヴァンガード 札幌", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
-    lat:43.057400, lng:141.351500, approx:true,
-    memo:"⚠️ 지점 위치 확인 필요 → 구글지도 버튼으로 가까운 지점 검색\n서점 겸 B급 잡화점" },
-  { name:"GU", jp:"GU 札幌", area:"삿포로", cat:"쇼핑", sub:"의류",
-    lat:43.066242, lng:141.353048,
+  { name:"빌리지 뱅가드 (도큐백화점)", jp:"ヴィレッジヴァンガード 札幌東急", area:"삿포로", cat:"쇼핑", sub:"문구·잡화",
+    lat:43.066437, lng:141.352424, gmap:"https://maps.google.com/?cid=9571529092380381113",
+    memo:"서점 겸 B급 잡화점 · 삿포로역 남쪽 도큐백화점\n1/17(일) 일정 '빌리지 뱅가드!!'" },
+  { name:"GU (도큐백화점)", jp:"GU 札幌東急", area:"삿포로", cat:"쇼핑", sub:"의류",
+    lat:43.066156, lng:141.352621, gmap:"https://maps.google.com/?cid=7191275188633443987",
     memo:"유니클로 자매 브랜드 · 저렴한 의류 (면세 가능 매장 확인)" },
   { name:"공항 국내선 2층 디저트 쇼핑", jp:"新千歳空港 国内線 2階 ショッピング", area:"공항", cat:"쇼핑", sub:"기념품",
     lat:42.78700, lng:141.68260, approx:true, blog:"224452825638",
@@ -471,6 +582,13 @@ const PLACES = [
   { name:"에비소바 이치겐 (공항 라멘도조)", jp:"えびそば一幻 新千歳空港", area:"공항", cat:"식당", sub:"라멘", chain:"에비소바 이치겐",
     lat:42.78685, lng:141.68320, approx:true, blog:"224452825638",
     memo:"국내선 3층 홋카이도 라멘도조 (라멘집 10곳)\n본점보다 회전율 빨라 웨이팅 적음" },
+
+  { name:"이온몰 삿포로 소엔점", area:"삿포로", cat:"쇼핑", sub:"백화점", lat:43.069468, lng:141.332927, gmap:"https://maps.google.com/?cid=6957885611903042238", memo:"대형 쇼핑몰 · JR 소엔역 근처" },
+  { name:"이온 오타루 (윙베이 오타루)", jp:"イオン小樽店", area:"오타루", cat:"쇼핑", sub:"백화점", lat:43.183915, lng:141.022733, approx:true, memo:"1/18(월) 일정 '돈키호테, 이온몰'\nJR 오타루치코역 바로 옆 · ⚠️ 위치 대략" },
+
+  /* ---------- 📌 기타 · 숙소 ---------- */
+  { name:"스스키노 그랑벨 호텔 (1/16~18)", jp:"すすきのグランベルホテル", area:"삿포로", cat:"기타", sub:"숙소", lat:43.055082, lng:141.35652, gmap:"https://maps.google.com/?cid=13627350734232279498", memo:"체크인 1/16(토) 18:30\n♨️ 25층 스파·사우나·대욕장 → 수건 챙겨가기\n   13:00~25:00, 5:00~9:00\n🍹 26층 라운지" },
+  { name:"도미 인 프리미엄 오타루 (1/18~19)", jp:"ドーミーインPREMIUM小樽", area:"오타루", cat:"기타", sub:"숙소", lat:43.198419, lng:140.994721, gmap:"https://maps.google.com/?cid=13172238794414949815", memo:"체크인 1/18(월) · 오타루역 앞\n🍜 21:30~23:00 2층 레스토랑에서 무료 야식 라멘\n🍳 조식 6:30~10:00 · 2층 안마의자" },
 
   /* ---------- 📌 기타 · 교통 ---------- */
   { name:"삿포로역", jp:"札幌駅", area:"삿포로", cat:"기타", sub:"교통", lat:43.068661, lng:141.350755, gmap:"https://maps.google.com/?cid=11953311579560888229",
@@ -509,9 +627,52 @@ const state = { area:store.get("sapporo-area","삿포로"), cat:null, sub:null, 
 
 const map = L.map("map",{zoomControl:false}).setView([43.0580,141.3530],15);
 L.control.zoom({position:"topright"}).addTo(map);
-L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{
-  maxZoom:19, attribution:'Tiles &copy; Esri'
-}).addTo(map);
+/* ---------- 지도 배경 + 글자 언어 (한국어 / 한+일 / 日本語) ---------- */
+const LANGS = { ko:"🌐 한국어", both:"🌐 한+일", ja:"🌐 日本語" };
+let mapLang = store.get("sapporo-maplang","ko");
+let glMap = null;
+const JA = ["coalesce",["get","name:ja"],["get","name"]];
+function labelExpr(lang, sep){
+  if(lang==="ja") return JA;
+  if(lang==="both") return ["case",["has","name:ko"],["concat",["get","name:ko"],sep,JA],JA];
+  return ["coalesce",["get","name:ko"],JA];
+}
+function applyLang(){
+  document.getElementById("langBtn").textContent = LANGS[mapLang];
+  if(!glMap || !glMap.isStyleLoaded()) return;
+  glMap.getStyle().layers.forEach(l=>{
+    if(l.type!=="symbol") return;
+    const tf=glMap.getLayoutProperty(l.id,"text-field");
+    if(!tf || JSON.stringify(tf).indexOf("name")<0) return;   // 도로번호 표지 등은 그대로
+    const line = glMap.getLayoutProperty(l.id,"symbol-placement")==="line";
+    glMap.setLayoutProperty(l.id,"text-field",labelExpr(mapLang, line?" ":"\n"));
+  });
+}
+function useEsri(){
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{
+    maxZoom:19, attribution:'Tiles &copy; Esri'
+  }).addTo(map);
+  document.getElementById("langBtn").style.display="none";   // 이 지도는 언어 변경 불가
+}
+try{
+  const cv=document.createElement("canvas");
+  if(!window.maplibregl || !L.maplibreGL || !(cv.getContext("webgl2") || cv.getContext("webgl"))) throw new Error("no webgl");
+  const gl = L.maplibreGL({
+    style:"https://tiles.openfreemap.org/styles/liberty",
+    attribution:'<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
+  }).addTo(map);
+  glMap = gl.getMaplibreMap();
+  glMap.on("styledata", applyLang);
+  let tileOk=false;
+  glMap.on("data", e=>{ if(e.dataType==="source" && e.tile) tileOk=true; });
+  setTimeout(()=>{ if(!tileOk && glMap){ map.removeLayer(gl); glMap=null; useEsri(); } }, 10000);   // 10초 안에 못 불러오면 Esri 지도로
+  glMap.on("error", e=>{ if(!glMap.isStyleLoaded() && String(e?.error?.message||"").match(/style|Failed to fetch/i)){ map.removeLayer(gl); glMap=null; useEsri(); } });
+}catch(e){ glMap=null; useEsri(); }
+document.getElementById("langBtn").onclick = () => {
+  mapLang = mapLang==="ko" ? "both" : mapLang==="both" ? "ja" : "ko";
+  store.set("sapporo-maplang", mapLang); applyLang();
+};
+applyLang();
 
 const layer = L.layerGroup().addTo(map);
 const markers = {};
@@ -607,7 +768,7 @@ function popupHtml(p){
     <div class="pp-btns">
       <a class="main" href="${gmapUrl(p)}" target="_blank" rel="noopener">🕒 구글지도 · 오늘 영업/휴무 확인</a>
       <a href="${dirUrl(p)}" target="_blank" rel="noopener">🚶 길찾기</a>
-      ${p.blog?`<a href="${BLOG}${p.blog}" target="_blank" rel="noopener">📝 블로그 후기</a>`:`<span></span>`}
+      ${p.blog?`<a href="${/^http/.test(p.blog)?p.blog:BLOG+p.blog}" target="_blank" rel="noopener">📝 블로그 후기</a>`:`<span></span>`}
       ${others>1?`<button style="grid-column:1/-1" onclick="showChain(${p.id})">🔗 ${esc(p.chain)} 전 지점 보기 (${others})</button>`:""}
       <button class="${m.star?"on":""}" onclick="toggleMark(${p.id},'star')">${m.star?"⭐ 가고 싶음":"☆ 가고 싶음"}</button>
       <button class="${m.done?"on":""}" onclick="toggleMark(${p.id},'done')">${m.done?"✅ 다녀옴":"◻️ 다녀옴"}</button>
@@ -664,6 +825,13 @@ window.toggleMark = (id,key) => {
   render(false); markers[id]?.openPopup();
 };
 
+document.getElementById("planBtn").onclick=()=>document.getElementById("plan").classList.add("open");
+window.goPlace = name => {
+  const p = PLACES.find(x=>x.name===name); if(!p) return;
+  document.getElementById("plan").classList.remove("open");
+  state.area=p.area; state.cat=null; state.sub=null; state.chain=null; store.set("sapporo-area",p.area);
+  render(false); map.setView([p.lat,p.lng],17); setTimeout(()=>markers[p.id]?.openPopup(),50);
+};
 document.getElementById("tipBtn").onclick=()=>document.getElementById("tips").classList.add("open");
 document.getElementById("sheetHead").onclick=()=>{
   const s=document.getElementById("sheet"); s.classList.toggle("min");
@@ -672,7 +840,9 @@ document.getElementById("sheetHead").onclick=()=>{
 };
 
 function placeLocBtn(){
-  document.getElementById("locBtn").style.bottom=(document.getElementById("sheet").offsetHeight+12)+"px";
+  const b=(document.getElementById("sheet").offsetHeight+12)+"px";
+  document.getElementById("locBtn").style.bottom=b;
+  document.getElementById("langBtn").style.bottom=b;
 }
 document.getElementById("locBtn").onclick=()=>{
   if(!navigator.geolocation){ alert("이 기기에서는 위치를 쓸 수 없어요"); return; }
